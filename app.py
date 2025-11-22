@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Application (COMPLETE & FIXED)
+# app.py - Main Streamlit Application (COMPLETE & FIXED v2)
 
 import streamlit as st
 import graphviz
@@ -213,7 +213,7 @@ def nfa_to_dfa(nfa):
     return dfa
 
 
-# ============== PATTERN MATCHING (FIXED) ==============
+# ============== PATTERN MATCHING (FIXED v2) ==============
 
 def build_kmp_automaton(pattern):
     """Build KMP-style DFA for pattern matching"""
@@ -223,8 +223,6 @@ def build_kmp_automaton(pattern):
     if m == 0:
         return {c: [] for c in alphabet}, 0
     
-    # DFA table: dfa[char][state] = next_state
-    # Size is m (states 0 to m-1), state m is implicit accept
     dfa_table = {c: [0] * m for c in alphabet}
     
     dfa_table[pattern[0]][0] = 1
@@ -240,7 +238,7 @@ def build_kmp_automaton(pattern):
 
 
 def search_pattern(dfa_table, pattern_length, text):
-    """Search for pattern in text using DFA - FIXED VERSION"""
+    """Search for pattern in text using DFA - FIXED VERSION v2"""
     matches = []
     
     if pattern_length == 0:
@@ -261,13 +259,14 @@ def search_pattern(dfa_table, pattern_length, text):
         
         # Check for match
         if state == pattern_length:
+            start_pos = i - pattern_length + 1
+            end_pos = i  # FIXED: end is now the last character index (0-indexed)
             matches.append({
-                'start': i - pattern_length + 1,
-                'end': i + 1,
-                'sequence': text[i - pattern_length + 1:i + 1]
+                'start': start_pos,
+                'end': end_pos,
+                'sequence': text[start_pos:i + 1]
             })
             # Reset to allow overlapping matches
-            # Use failure function logic: go back to appropriate state
             state = dfa_table[char][0] if pattern_length > 0 else 0
     
     return matches
@@ -360,26 +359,29 @@ def create_simple_dfa_graph(pattern):
 # ============== HELPER FUNCTIONS ==============
 
 def highlight_matches(dna, matches):
-    """Create HTML with highlighted matches"""
+    """Create HTML with highlighted matches - FIXED v2"""
     if not matches:
         return f'<div class="sequence-box">{dna}</div>'
     
     html_parts = []
-    last_end = 0
+    last_end = -1
     
     sorted_matches = sorted(matches, key=lambda x: x['start'])
     
     for match in sorted_matches:
-        if match['start'] > last_end:
-            html_parts.append(dna[last_end:match['start']])
-        elif match['start'] < last_end:
-            continue
+        start = match['start']
+        end = match['end']  # This is now the actual last index
         
-        html_parts.append(f'<span class="match-highlight">{dna[match["start"]:match["end"]]}</span>')
-        last_end = match['end']
+        if start > last_end + 1:
+            html_parts.append(dna[last_end + 1:start])
+        elif start <= last_end:
+            continue  # Skip overlapping
+        
+        html_parts.append(f'<span class="match-highlight">{dna[start:end + 1]}</span>')
+        last_end = end
     
-    if last_end < len(dna):
-        html_parts.append(dna[last_end:])
+    if last_end < len(dna) - 1:
+        html_parts.append(dna[last_end + 1:])
     
     result = ''.join(html_parts)
     return f'<div class="sequence-box">{result}</div>'
