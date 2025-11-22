@@ -684,3 +684,6 @@ def main():
     st.markdown('---')
     st.markdown("""
     <p style="text-align: center; color: #666; font-size: 0.8rem;">
+        🧬 DNA Pattern Matcher | Theory of Computation Mini Project<br>
+        Built with Streamlit | Concepts: NFA, DFA, Thompson's Construction, Subset Construction
+    </p>
