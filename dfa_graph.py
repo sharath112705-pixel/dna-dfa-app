@@ -1,5 +1,5 @@
 def plot_dna_dfa():
-    graph = f"""
+    graph = """
     digraph {
         rankdir=LR
         node [shape=circle, style=filled, fontcolor=black, fontsize=16]
