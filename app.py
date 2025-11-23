@@ -473,7 +473,7 @@ SAMPLE_SEQUENCES = {
 
 def main():
     # Header
-    st.markdown('<h1 class="main-header">🧬 DNA Pattern Matcher</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🧬 GeneScan - DNA Pattern Matcher</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #888;">Using Finite Automata for Genetic Sequence Analysis | Theory of Computation Project</p>', unsafe_allow_html=True)
     st.markdown('---')
     
