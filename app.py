@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Application (COMPLETE & FIXED v2)
+# app.py - Main Streamlit Application (COMPLETE & FIXED v3)
 
 import streamlit as st
 import graphviz
@@ -213,7 +213,7 @@ def nfa_to_dfa(nfa):
     return dfa
 
 
-# ============== PATTERN MATCHING (FIXED v2) ==============
+# ============== PATTERN MATCHING ==============
 
 def build_kmp_automaton(pattern):
     """Build KMP-style DFA for pattern matching"""
@@ -238,7 +238,7 @@ def build_kmp_automaton(pattern):
 
 
 def search_pattern(dfa_table, pattern_length, text):
-    """Search for pattern in text using DFA - FIXED VERSION v2"""
+    """Search for pattern in text using DFA"""
     matches = []
     
     if pattern_length == 0:
@@ -251,22 +251,19 @@ def search_pattern(dfa_table, pattern_length, text):
             state = 0
             continue
         
-        # Get next state (handle boundary case)
         if state < pattern_length:
             state = dfa_table[char][state]
         else:
             state = dfa_table[char][0]
         
-        # Check for match
         if state == pattern_length:
             start_pos = i - pattern_length + 1
-            end_pos = i  # FIXED: end is now the last character index (0-indexed)
+            end_pos = i
             matches.append({
                 'start': start_pos,
                 'end': end_pos,
                 'sequence': text[start_pos:i + 1]
             })
-            # Reset to allow overlapping matches
             state = dfa_table[char][0] if pattern_length > 0 else 0
     
     return matches
@@ -293,10 +290,74 @@ def search_multiple_patterns(patterns, text):
     return all_matches
 
 
-# ============== VISUALIZATION ==============
+# ============== VISUALIZATION (FIXED) ==============
+
+def create_kmp_dfa_visualization(pattern):
+    """Create complete KMP DFA visualization with all transitions including failure paths"""
+    if not pattern:
+        return None
+    
+    m = len(pattern)
+    alphabet = ['A', 'T', 'G', 'C']
+    
+    # Build KMP DFA table
+    dfa_table, _ = build_kmp_automaton(pattern)
+    
+    dot = graphviz.Digraph(comment='KMP DFA')
+    dot.attr(rankdir='LR', bgcolor='#0d1117')
+    dot.attr('node', style='filled', fontcolor='white', fontname='Arial Bold', fontsize='14')
+    dot.attr('edge', fontname='Arial', fontsize='12')
+    
+    # Create states
+    for i in range(m + 1):
+        if i == m:
+            dot.node(f'q{i}', f'q{i}', shape='doublecircle',
+                     fillcolor='#22c55e', color='#16a34a', penwidth='2')
+        elif i == 0:
+            dot.node(f'q{i}', f'q{i}', shape='circle',
+                     fillcolor='#3b82f6', color='#ef4444', penwidth='3')
+        else:
+            dot.node(f'q{i}', f'q{i}', shape='circle',
+                     fillcolor='#3b82f6', color='#1e40af', penwidth='2')
+    
+    # Start arrow
+    dot.node('start', '', shape='none', width='0', height='0')
+    dot.edge('start', 'q0', color='#ef4444', penwidth='2')
+    
+    # Collect transitions by (from, to) to group labels
+    transitions = defaultdict(list)
+    
+    for state in range(m):
+        for char in alphabet:
+            next_state = dfa_table[char][state]
+            transitions[(state, next_state)].append(char)
+    
+    # Draw transitions
+    for (from_state, to_state), chars in transitions.items():
+        label = ','.join(sorted(chars))
+        
+        # Forward transitions (main path)
+        if to_state == from_state + 1:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
+                    color='#4ade80', fontcolor='#4ade80', penwidth='2')
+        # Backward transitions (failure/restart)
+        elif to_state < from_state:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
+                    color='#f59e0b', fontcolor='#f59e0b', style='dashed')
+        # Self loops
+        elif to_state == from_state:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
+                    color='#94a3b8', fontcolor='#94a3b8')
+        # Other transitions
+        else:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
+                    color='#64748b', fontcolor='#64748b')
+    
+    return dot
+
 
 def create_automaton_graph(dfa, pattern):
-    """Create Graphviz visualization of DFA"""
+    """Create Graphviz visualization of DFA from NFA"""
     dot = graphviz.Digraph(comment='DFA')
     dot.attr(rankdir='LR', bgcolor='#1a1a2e')
     dot.attr('node', style='filled', fontcolor='white', fontname='Arial')
@@ -329,37 +390,10 @@ def create_automaton_graph(dfa, pattern):
     return dot
 
 
-def create_simple_dfa_graph(pattern):
-    """Create simple linear DFA visualization"""
-    dot = graphviz.Digraph(comment='Pattern DFA')
-    dot.attr(rankdir='LR', bgcolor='#0d1117')
-    dot.attr('node', style='filled', fontcolor='white', fontname='Arial Bold', fontsize='14')
-    dot.attr('edge', fontcolor='#ff6b6b', fontname='Arial Bold', fontsize='14', color='#4a5568')
-    
-    for i in range(len(pattern) + 1):
-        if i == len(pattern):
-            dot.node(f'q{i}', f'q{i}', shape='doublecircle',
-                     fillcolor='#22c55e', color='#16a34a', penwidth='2')
-        elif i == 0:
-            dot.node(f'q{i}', f'q{i}', shape='circle',
-                     fillcolor='#3b82f6', color='#ef4444', penwidth='3')
-        else:
-            dot.node(f'q{i}', f'q{i}', shape='circle',
-                     fillcolor='#3b82f6', color='#1e40af', penwidth='2')
-    
-    dot.node('start', '', shape='none', width='0', height='0')
-    dot.edge('start', 'q0', color='#ef4444', penwidth='2')
-    
-    for i, char in enumerate(pattern):
-        dot.edge(f'q{i}', f'q{i+1}', label=f' {char} ', penwidth='2')
-    
-    return dot
-
-
 # ============== HELPER FUNCTIONS ==============
 
 def highlight_matches(dna, matches):
-    """Create HTML with highlighted matches - FIXED v2"""
+    """Create HTML with highlighted matches"""
     if not matches:
         return f'<div class="sequence-box">{dna}</div>'
     
@@ -370,12 +404,12 @@ def highlight_matches(dna, matches):
     
     for match in sorted_matches:
         start = match['start']
-        end = match['end']  # This is now the actual last index
+        end = match['end']
         
         if start > last_end + 1:
             html_parts.append(dna[last_end + 1:start])
         elif start <= last_end:
-            continue  # Skip overlapping
+            continue
         
         html_parts.append(f'<span class="match-highlight">{dna[start:end + 1]}</span>')
         last_end = end
@@ -469,11 +503,17 @@ SAMPLE_SEQUENCES = {
 }
 
 
-# ============== MAIN APP ==============
+# ============== MAIN APP (FIXED) ==============
 
 def main():
+    # Initialize session state
+    if 'dna_sequence' not in st.session_state:
+        st.session_state.dna_sequence = SAMPLE_SEQUENCES['Simple Test']
+    if 'pattern' not in st.session_state:
+        st.session_state.pattern = 'ATG'
+    
     # Header
-    st.markdown('<h1 class="main-header">🧬 GeneScan - DNA Pattern Matcher</h1>', unsafe_allow_html=True)
+    st.markdown('<h1 class="main-header">🧬 DNA Pattern Matcher</h1>', unsafe_allow_html=True)
     st.markdown('<p style="text-align: center; color: #888;">Using Finite Automata for Genetic Sequence Analysis | Theory of Computation Project</p>', unsafe_allow_html=True)
     st.markdown('---')
     
@@ -482,7 +522,16 @@ def main():
         st.header("⚙️ Settings")
         
         st.subheader("📁 Load Sample Sequence")
-        sample_choice = st.selectbox("Choose sample:", list(SAMPLE_SEQUENCES.keys()))
+        sample_choice = st.selectbox(
+            "Choose sample:", 
+            list(SAMPLE_SEQUENCES.keys()),
+            key='sample_selector'
+        )
+        
+        # Update DNA sequence when sample changes
+        if st.button("Load Sample", key='load_sample_btn', use_container_width=True):
+            st.session_state.dna_sequence = SAMPLE_SEQUENCES[sample_choice]
+            st.rerun()
         
         st.subheader("🔬 Quick Patterns")
         pattern_buttons = {
@@ -494,10 +543,10 @@ def main():
             'Poly-A Signal': 'AATAAA'
         }
         
-        selected_pattern = None
         for name, pat in pattern_buttons.items():
             if st.button(name, key=f"btn_{pat}", use_container_width=True):
-                selected_pattern = pat
+                st.session_state.pattern = pat
+                st.rerun()
         
         st.markdown('---')
         st.subheader("📚 About")
@@ -510,20 +559,23 @@ def main():
         st.subheader("🧬 DNA Sequence Input")
         dna_input = st.text_area(
             "Enter DNA sequence (A, T, G, C only):",
-            value=SAMPLE_SEQUENCES[sample_choice],
+            value=st.session_state.dna_sequence,
             height=150,
-            key="dna_input"
+            key="dna_input_field"
         )
+        # Update session state when user types
+        st.session_state.dna_sequence = dna_input
     
     with col2:
         st.subheader("🔍 Pattern")
-        default_pattern = selected_pattern if selected_pattern else 'ATG'
         pattern_input = st.text_input(
             "Enter pattern to search:",
-            value=default_pattern,
-            key="pattern_input",
+            value=st.session_state.pattern,
+            key="pattern_input_field",
             help="Use | for multiple patterns (e.g., TAA|TAG|TGA)"
         )
+        # Update session state when user types
+        st.session_state.pattern = pattern_input
         st.caption("**Examples:** ATG, TATA, TAA|TAG|TGA")
     
     # Search button
@@ -589,15 +641,17 @@ def main():
             if '|' in pattern_clean:
                 nfa = regex_to_nfa(pattern_clean)
                 dfa = nfa_to_dfa(nfa)
-                st.caption("DFA constructed from NFA using subset construction")
+                st.caption("DFA constructed from NFA using subset construction (for multiple patterns)")
                 dot = create_automaton_graph(dfa, pattern_clean)
             else:
                 st.caption("KMP-style DFA for pattern matching")
-                dot = create_simple_dfa_graph(pattern_clean)
+                st.info("**Legend:** 🟢 Green = Forward transitions | 🟠 Orange (dashed) = Failure/restart transitions | ⚪ Gray = Self-loops")
+                dot = create_kmp_dfa_visualization(pattern_clean)
                 nfa = pattern_to_nfa(pattern_clean)
                 dfa = nfa_to_dfa(nfa)
             
-            st.graphviz_chart(dot, use_container_width=True)
+            if dot:
+                st.graphviz_chart(dot, use_container_width=True)
             
             # DFA stats
             col_dfa1, col_dfa2, col_dfa3 = st.columns(3)
@@ -607,6 +661,10 @@ def main():
                 st.metric("Transitions", len(dfa.transitions))
             with col_dfa3:
                 st.metric("Accept States", len(dfa.accept_states))
+            
+            # Explanation for repeating patterns
+            if len(pattern_clean) != len(set(pattern_clean)) and '|' not in pattern_clean:
+                st.info(f"ℹ️ Pattern **{pattern_clean}** has repeating characters. The orange dashed arrows show failure transitions that allow the automaton to efficiently handle partial matches.")
         
         with tab3:
             st.subheader("Match Details")
