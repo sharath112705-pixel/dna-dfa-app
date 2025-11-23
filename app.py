@@ -1,4 +1,4 @@
-# app.py - Main Streamlit Application (COMPLETE & FIXED v3)
+# app.py - Main Streamlit Application (COMPLETE & FIXED v4)
 
 import streamlit as st
 import graphviz
@@ -47,10 +47,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Sample DNA sequences
+SAMPLE_SEQUENCES = {
+    'Simple Test': 'ATGATCGATCGTAGATGCTAGCTGATCGATGTAAATAGCTGATCG',
+    'BRCA1 Fragment': 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGTCTGGAGTTGATCAAGGAACCTGTCTCCACAAAGTGTGACCACATATTTTGCAAATTTTGCATGCTGAAACTTCTCAACCAGAAGAAAGGGCCTTCACAGTGTCCTTTATGTAAGAATGATATAACCAAAAGGAGCCTACAAGAAAGTACGAGATTTAGTCAACTTGTTGAAGAGCTATTGAAAATCATTTGTGCTTTTCAGCTTGACACAGGTTTGGAGTATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAACCGTGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTG',
+    'CAG Repeat Test': 'ATGAAGGCCTTCGAGTCCCTCAAGTCCTTCCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAACAGCCGCCACCGCCGCCGCCGCCGCCGCCTCCTCAGCTTCCTCAGCCGCCGCCG',
+    'E. coli lacZ': 'ATGACCATGATTACGGATTCACTGGCCGTCGTTTTACAACGTCGTGACTGGGAAAACCCTGGCGTTACCCAACTTAATCGCCTTGCAGCACATCCCCCTTTCGCCAGCTGGCGTAATAGCGAAGAGGCCCGCACCGATCGCCCTTCCCAACAGTTGCGCAGCCTGAATGGCGAATGGCGCTTTGCCTGGTTTCCGGCACCAGAAGCGGTGCCGGAAAGCTGGCTGGAGTGCGATCTTCCTGAGGCCGATACTGTCGTCGTCCCCTCAAACTGGCAGATGCACGGTTACGATGCGCCCATCTACACCAACGTGACCTATCCCATTACGGTCAATCCGCCGTTTGTTCCCACGGAGAATCCGACGGGTTGTTACTCGCTCACATTTAATGTTGATGAAAGCTGGCTACAGGAAGGCCAGACGCGAATTATTTTTGATGGCGTTAATAAA'
+}
+
 # ============== AUTOMATA CLASSES ==============
 
 class State:
-    """Represents a state in NFA/DFA"""
     def __init__(self, state_id, is_accept=False):
         self.id = state_id
         self.is_accept = is_accept
@@ -59,7 +66,6 @@ class State:
 
 
 class NFA:
-    """Non-deterministic Finite Automaton"""
     def __init__(self):
         self.states = []
         self.start_state = None
@@ -75,7 +81,6 @@ class NFA:
 
 
 class DFA:
-    """Deterministic Finite Automaton"""
     def __init__(self):
         self.num_states = 0
         self.start_state = 0
@@ -87,9 +92,7 @@ class DFA:
 # ============== NFA CONSTRUCTION ==============
 
 def pattern_to_nfa(pattern):
-    """Convert simple pattern to NFA"""
     nfa = NFA()
-    
     if not pattern:
         state = nfa.add_state(True)
         nfa.start_state = state
@@ -108,7 +111,6 @@ def pattern_to_nfa(pattern):
 
 
 def alternate_nfa(nfa1, nfa2):
-    """Create union of two NFAs"""
     combined = NFA()
     new_start = combined.add_state()
     combined.start_state = new_start
@@ -126,7 +128,6 @@ def alternate_nfa(nfa1, nfa2):
 
 
 def regex_to_nfa(regex):
-    """Convert simple regex with | to NFA"""
     if '|' in regex:
         parts = regex.split('|')
         nfa = pattern_to_nfa(parts[0])
@@ -140,7 +141,6 @@ def regex_to_nfa(regex):
 # ============== NFA TO DFA CONVERSION ==============
 
 def epsilon_closure(states):
-    """Compute epsilon closure"""
     closure = set(states)
     stack = list(states)
     
@@ -155,7 +155,6 @@ def epsilon_closure(states):
 
 
 def move(states, symbol):
-    """Compute move function"""
     result = set()
     for state in states:
         if symbol in state.transitions:
@@ -164,7 +163,6 @@ def move(states, symbol):
 
 
 def nfa_to_dfa(nfa):
-    """Convert NFA to DFA using subset construction"""
     dfa = DFA()
     alphabet = ['A', 'T', 'G', 'C']
     
@@ -216,7 +214,6 @@ def nfa_to_dfa(nfa):
 # ============== PATTERN MATCHING ==============
 
 def build_kmp_automaton(pattern):
-    """Build KMP-style DFA for pattern matching"""
     m = len(pattern)
     alphabet = ['A', 'T', 'G', 'C']
     
@@ -224,7 +221,6 @@ def build_kmp_automaton(pattern):
         return {c: [] for c in alphabet}, 0
     
     dfa_table = {c: [0] * m for c in alphabet}
-    
     dfa_table[pattern[0]][0] = 1
     x = 0
     
@@ -238,14 +234,11 @@ def build_kmp_automaton(pattern):
 
 
 def search_pattern(dfa_table, pattern_length, text):
-    """Search for pattern in text using DFA"""
     matches = []
-    
     if pattern_length == 0:
         return matches
     
     state = 0
-    
     for i, char in enumerate(text):
         if char not in dfa_table:
             state = 0
@@ -270,7 +263,6 @@ def search_pattern(dfa_table, pattern_length, text):
 
 
 def search_multiple_patterns(patterns, text):
-    """Search for multiple patterns"""
     all_matches = []
     seen = set()
     
@@ -290,10 +282,10 @@ def search_multiple_patterns(patterns, text):
     return all_matches
 
 
-# ============== VISUALIZATION (FIXED) ==============
+# ============== VISUALIZATION (COMPLETELY REWRITTEN) ==============
 
 def create_kmp_dfa_visualization(pattern):
-    """Create complete KMP DFA visualization with all transitions including failure paths"""
+    """Create complete KMP DFA with ALL transitions"""
     if not pattern:
         return None
     
@@ -303,16 +295,16 @@ def create_kmp_dfa_visualization(pattern):
     # Build KMP DFA table
     dfa_table, _ = build_kmp_automaton(pattern)
     
-    dot = graphviz.Digraph(comment='KMP DFA')
-    dot.attr(rankdir='LR', bgcolor='#0d1117')
+    dot = graphviz.Digraph(comment='KMP DFA', engine='dot')
+    dot.attr(rankdir='LR', bgcolor='#0d1117', splines='curved')
     dot.attr('node', style='filled', fontcolor='white', fontname='Arial Bold', fontsize='14')
-    dot.attr('edge', fontname='Arial', fontsize='12')
+    dot.attr('edge', fontname='Arial', fontsize='11')
     
-    # Create states
+    # Create all states (0 to m, where m is accept state)
     for i in range(m + 1):
         if i == m:
             dot.node(f'q{i}', f'q{i}', shape='doublecircle',
-                     fillcolor='#22c55e', color='#16a34a', penwidth='2')
+                     fillcolor='#22c55e', color='#16a34a', penwidth='3')
         elif i == 0:
             dot.node(f'q{i}', f'q{i}', shape='circle',
                      fillcolor='#3b82f6', color='#ef4444', penwidth='3')
@@ -321,71 +313,83 @@ def create_kmp_dfa_visualization(pattern):
                      fillcolor='#3b82f6', color='#1e40af', penwidth='2')
     
     # Start arrow
-    dot.node('start', '', shape='none', width='0', height='0')
-    dot.edge('start', 'q0', color='#ef4444', penwidth='2')
+    dot.node('', '', shape='none', width='0')
+    dot.edge('', 'q0', color='#ef4444', penwidth='2')
     
-    # Collect transitions by (from, to) to group labels
-    transitions = defaultdict(list)
+    # Collect ALL transitions
+    edge_map = defaultdict(list)
     
     for state in range(m):
         for char in alphabet:
             next_state = dfa_table[char][state]
-            transitions[(state, next_state)].append(char)
+            edge_map[(state, next_state)].append(char)
     
-    # Draw transitions
-    for (from_state, to_state), chars in transitions.items():
+    # Draw all transitions with proper styling
+    for (from_state, to_state), chars in edge_map.items():
         label = ','.join(sorted(chars))
         
-        # Forward transitions (main path)
+        # Forward transition (progress in pattern)
         if to_state == from_state + 1:
             dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
-                    color='#4ade80', fontcolor='#4ade80', penwidth='2')
-        # Backward transitions (failure/restart)
+                    color='#4ade80', fontcolor='#4ade80', penwidth='2.5')
+        
+        # Backward transition (failure/mismatch - go back)
         elif to_state < from_state:
             dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
-                    color='#f59e0b', fontcolor='#f59e0b', style='dashed')
-        # Self loops
+                    color='#f59e0b', fontcolor='#fbbf24', style='dashed', penwidth='1.5',
+                    constraint='false')
+        
+        # Self loop
         elif to_state == from_state:
             dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
-                    color='#94a3b8', fontcolor='#94a3b8')
-        # Other transitions
+                    color='#94a3b8', fontcolor='#cbd5e1', dir='back', tailport='n', headport='n')
+        
+        # Jump forward (rare)
         else:
             dot.edge(f'q{from_state}', f'q{to_state}', label=f' {label} ',
-                    color='#64748b', fontcolor='#64748b')
+                    color='#8b5cf6', fontcolor='#a78bfa', penwidth='1.5')
     
     return dot
 
 
 def create_automaton_graph(dfa, pattern):
-    """Create Graphviz visualization of DFA from NFA"""
-    dot = graphviz.Digraph(comment='DFA')
-    dot.attr(rankdir='LR', bgcolor='#1a1a2e')
-    dot.attr('node', style='filled', fontcolor='white', fontname='Arial')
-    dot.attr('edge', fontcolor='#e74c3c', fontname='Arial', fontsize='12')
+    """Create DFA visualization for regex patterns with alternation"""
+    dot = graphviz.Digraph(comment='DFA', engine='dot')
+    dot.attr(rankdir='LR', bgcolor='#1a1a2e', splines='curved')
+    dot.attr('node', style='filled', fontcolor='white', fontname='Arial', fontsize='13')
+    dot.attr('edge', fontcolor='#e74c3c', fontname='Arial', fontsize='11')
     
+    # Create states
     for i in range(dfa.num_states):
         if i in dfa.accept_states:
             dot.node(f'q{i}', f'q{i}', shape='doublecircle',
-                     fillcolor='#2ecc71', color='#27ae60')
+                     fillcolor='#2ecc71', color='#27ae60', penwidth='2')
         elif i == dfa.start_state:
             dot.node(f'q{i}', f'q{i}', shape='circle',
                      fillcolor='#3498db', color='#e74c3c', penwidth='3')
         else:
             dot.node(f'q{i}', f'q{i}', shape='circle',
-                     fillcolor='#3498db', color='#2c3e50')
+                     fillcolor='#3498db', color='#2c3e50', penwidth='2')
     
-    dot.node('start', '', shape='none', width='0', height='0')
-    dot.edge('start', f'q{dfa.start_state}', color='#e74c3c', penwidth='2')
+    # Start arrow
+    dot.node('', '', shape='none', width='0')
+    dot.edge('', f'q{dfa.start_state}', color='#e74c3c', penwidth='2')
     
+    # Group transitions by edge
     edge_labels = defaultdict(list)
     for trans in dfa.transitions:
         key = (trans['from'], trans['to'])
         edge_labels[key].append(trans['symbol'])
     
+    # Draw edges
     for (from_state, to_state), symbols in edge_labels.items():
         label = ','.join(sorted(symbols))
-        dot.edge(f'q{from_state}', f'q{to_state}', label=label,
-                 color='#666', fontcolor='#e74c3c')
+        if from_state == to_state:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=label,
+                     color='#95a5a6', fontcolor='#ecf0f1')
+        else:
+            dot.edge(f'q{from_state}', f'q{to_state}', label=label,
+                     color='#7f8c8d', fontcolor='#e74c3c', penwidth='1.5')
     
     return dot
 
@@ -393,7 +397,6 @@ def create_automaton_graph(dfa, pattern):
 # ============== HELPER FUNCTIONS ==============
 
 def highlight_matches(dna, matches):
-    """Create HTML with highlighted matches"""
     if not matches:
         return f'<div class="sequence-box">{dna}</div>'
     
@@ -422,7 +425,6 @@ def highlight_matches(dna, matches):
 
 
 def get_pattern_info(pattern):
-    """Get biological information about the pattern"""
     pattern_db = {
         'ATG': {
             'name': 'Start Codon (Methionine)',
@@ -460,22 +462,10 @@ def get_pattern_info(pattern):
             'significance': 'Widely used in molecular cloning and genetic engineering.',
             'category': 'Restriction Site'
         },
-        'GGATCC': {
-            'name': 'BamHI Restriction Site',
-            'description': 'Recognition sequence for BamHI restriction enzyme.',
-            'significance': 'Common restriction site used in cloning vectors.',
-            'category': 'Restriction Site'
-        },
         'CAG': {
             'name': 'CAG Trinucleotide (Glutamine)',
             'description': 'Codes for the amino acid Glutamine. Abnormal expansion causes several diseases.',
             'significance': 'More than 36 CAG repeats in HTT gene causes Huntingtons disease.',
-            'category': 'Trinucleotide Repeat'
-        },
-        'CGG': {
-            'name': 'CGG Trinucleotide',
-            'description': 'Codes for Arginine. Expansion in FMR1 gene causes Fragile X syndrome.',
-            'significance': 'More than 200 repeats causes intellectual disability.',
             'category': 'Trinucleotide Repeat'
         },
         'AATAAA': {
@@ -494,30 +484,10 @@ def get_pattern_info(pattern):
     })
 
 
-# Sample DNA sequences
-SAMPLE_SEQUENCES = {
-    'Simple Test': 'ATGATCGATCGTAGATGCTAGCTGATCGATGTAAATAGCTGATCG',
-    'BRCA1 Fragment': 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGTCTGGAGTTGATCAAGGAACCTGTCTCCACAAAGTGTGACCACATATTTTGCAAATTTTGCATGCTGAAACTTCTCAACCAGAAGAAAGGGCCTTCACAGTGTCCTTTATGTAAGAATGATATAACCAAAAGGAGCCTACAAGAAAGTACGAGATTTAGTCAACTTGTTGAAGAGCTATTGAAAATCATTTGTGCTTTTCAGCTTGACACAGGTTTGGAGTATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAACCGTGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTG',
-    'CAG Repeat Test': 'ATGAAGGCCTTCGAGTCCCTCAAGTCCTTCCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAACAGCCGCCACCGCCGCCGCCGCCGCCGCCTCCTCAGCTTCCTCAGCCGCCGCCG',
-    'E. coli lacZ': 'ATGACCATGATTACGGATTCACTGGCCGTCGTTTTACAACGTCGTGACTGGGAAAACCCTGGCGTTACCCAACTTAATCGCCTTGCAGCACATCCCCCTTTCGCCAGCTGGCGTAATAGCGAAGAGGCCCGCACCGATCGCCCTTCCCAACAGTTGCGCAGCCTGAATGGCGAATGGCGCTTTGCCTGGTTTCCGGCACCAGAAGCGGTGCCGGAAAGCTGGCTGGAGTGCGATCTTCCTGAGGCCGATACTGTCGTCGTCCCCTCAAACTGGCAGATGCACGGTTACGATGCGCCCATCTACACCAACGTGACCTATCCCATTACGGTCAATCCGCCGTTTGTTCCCACGGAGAATCCGACGGGTTGTTACTCGCTCACATTTAATGTTGATGAAAGCTGGCTACAGGAAGGCCAGACGCGAATTATTTTTGATGGCGTTAATAAA'
-}
-
-
-# ============== MAIN APP (FIXED) ==============
+# ============== MAIN APP (COMPLETELY FIXED) ==============
 
 def main():
-    # Initialize session state
-    if 'dna_sequence' not in st.session_state:
-        st.session_state.dna_sequence = SAMPLE_SEQUENCES['Simple Test']
-    if 'pattern' not in st.session_state:
-        st.session_state.pattern = 'ATG'
-    
-    # Header
-    st.markdown('<h1 class="main-header">🧬 DNA Pattern Matcher</h1>', unsafe_allow_html=True)
-    st.markdown('<p style="text-align: center; color: #888;">Using Finite Automata for Genetic Sequence Analysis | Theory of Computation Project</p>', unsafe_allow_html=True)
-    st.markdown('---')
-    
-    # Sidebar
+    # Sidebar with IMMEDIATE updates
     with st.sidebar:
         st.header("⚙️ Settings")
         
@@ -525,81 +495,73 @@ def main():
         sample_choice = st.selectbox(
             "Choose sample:", 
             list(SAMPLE_SEQUENCES.keys()),
-            key='sample_selector'
+            key='sample_selector_unique'
         )
         
-        # Update DNA sequence when sample changes
-        if st.button("Load Sample", key='load_sample_btn', use_container_width=True):
-            st.session_state.dna_sequence = SAMPLE_SEQUENCES[sample_choice]
-            st.rerun()
-        
         st.subheader("🔬 Quick Patterns")
-        pattern_buttons = {
-            'Start Codon': 'ATG',
-            'Stop Codons': 'TAA|TAG|TGA',
-            'TATA Box': 'TATA',
-            'EcoRI Site': 'GAATTC',
-            'CAG Repeat': 'CAG',
-            'Poly-A Signal': 'AATAAA'
-        }
-        
-        for name, pat in pattern_buttons.items():
-            if st.button(name, key=f"btn_{pat}", use_container_width=True):
-                st.session_state.pattern = pat
-                st.rerun()
+        pattern_choice = st.radio(
+            "Select pattern:",
+            ['Custom', 'ATG', 'TAA|TAG|TGA', 'TATA', 'GAATTC', 'CAG', 'AATAAA'],
+            key='pattern_selector_unique'
+        )
         
         st.markdown('---')
         st.subheader("📚 About")
-        st.info("**TOC Concepts Used:**\n- Regular Expressions\n- NFA Construction\n- NFA to DFA Conversion\n- String Matching Automata")
+        st.info("**TOC Concepts:**\n- Regular Expressions\n- NFA Construction\n- NFA to DFA\n- KMP Automata")
     
-    # Main content
+    # Header
+    st.markdown('<h1 class="main-header">🧬 DNA Pattern Matcher</h1>', unsafe_allow_html=True)
+    st.markdown('<p style="text-align: center; color: #888;">Using Finite Automata | Theory of Computation Project</p>', unsafe_allow_html=True)
+    st.markdown('---')
+    
+    # Main content with values FROM sidebar
     col1, col2 = st.columns([2, 1])
     
     with col1:
         st.subheader("🧬 DNA Sequence Input")
         dna_input = st.text_area(
             "Enter DNA sequence (A, T, G, C only):",
-            value=st.session_state.dna_sequence,
+            value=SAMPLE_SEQUENCES[sample_choice],  # Directly use sidebar value
             height=150,
-            key="dna_input_field"
+            key="dna_textarea"
         )
-        # Update session state when user types
-        st.session_state.dna_sequence = dna_input
     
     with col2:
         st.subheader("🔍 Pattern")
-        pattern_input = st.text_input(
-            "Enter pattern to search:",
-            value=st.session_state.pattern,
-            key="pattern_input_field",
-            help="Use | for multiple patterns (e.g., TAA|TAG|TGA)"
-        )
-        # Update session state when user types
-        st.session_state.pattern = pattern_input
+        # Use pattern from sidebar radio button
+        if pattern_choice == 'Custom':
+            pattern_input = st.text_input(
+                "Enter pattern:",
+                value='ATG',
+                key="pattern_field"
+            )
+        else:
+            pattern_input = st.text_input(
+                "Enter pattern:",
+                value=pattern_choice,
+                key="pattern_field"
+            )
         st.caption("**Examples:** ATG, TATA, TAA|TAG|TGA")
     
     # Search button
     search_clicked = st.button("🔍 Build Automaton & Search", type="primary", use_container_width=True)
     
     if search_clicked:
-        # Validate inputs
         if not dna_input or not pattern_input:
             st.error("❌ Please enter both DNA sequence and pattern.")
             return
         
-        # Clean inputs
         dna_clean = ''.join(c for c in dna_input.upper() if c in 'ATGC')
         pattern_clean = ''.join(c for c in pattern_input.upper() if c in 'ATGC|')
         
         if not dna_clean:
-            st.error("❌ Invalid DNA sequence. Please use only A, T, G, C characters.")
+            st.error("❌ Invalid DNA sequence.")
             return
         
         if not pattern_clean or pattern_clean == '|':
-            st.error("❌ Invalid pattern. Please enter a valid pattern.")
+            st.error("❌ Invalid pattern.")
             return
         
-        # Remove empty patterns from alternation
         if '|' in pattern_clean:
             patterns = [p for p in pattern_clean.split('|') if p]
             if not patterns:
@@ -609,11 +571,10 @@ def main():
         
         st.markdown('---')
         
-        # Create tabs for results
-        tab1, tab2, tab3, tab4 = st.tabs(["📊 Results", "🔄 Automaton", "📋 Match Details", "📖 Pattern Info"])
+        # Tabs
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Results", "🔄 Automaton", "📋 Details", "📖 Info"])
         
         with tab1:
-            # Perform search
             if '|' in pattern_clean:
                 patterns = pattern_clean.split('|')
                 matches = search_multiple_patterns(patterns, dna_clean)
@@ -621,7 +582,6 @@ def main():
                 dfa_table, pattern_length = build_kmp_automaton(pattern_clean)
                 matches = search_pattern(dfa_table, pattern_length, dna_clean)
             
-            # Display stats
             col_stat1, col_stat2, col_stat3 = st.columns(3)
             with col_stat1:
                 st.metric("Sequence Length", f"{len(dna_clean)} bp")
@@ -630,22 +590,20 @@ def main():
             with col_stat3:
                 st.metric("Matches Found", len(matches))
             
-            # Display highlighted sequence
-            st.subheader("Sequence with Highlighted Matches")
+            st.subheader("Highlighted Matches")
             st.markdown(highlight_matches(dna_clean, matches), unsafe_allow_html=True)
         
         with tab2:
             st.subheader("Finite Automaton (DFA)")
             
-            # Build and visualize DFA
             if '|' in pattern_clean:
                 nfa = regex_to_nfa(pattern_clean)
                 dfa = nfa_to_dfa(nfa)
-                st.caption("DFA constructed from NFA using subset construction (for multiple patterns)")
+                st.caption("DFA for multiple patterns (alternation)")
                 dot = create_automaton_graph(dfa, pattern_clean)
             else:
-                st.caption("KMP-style DFA for pattern matching")
-                st.info("**Legend:** 🟢 Green = Forward transitions | 🟠 Orange (dashed) = Failure/restart transitions | ⚪ Gray = Self-loops")
+                st.caption("KMP-style DFA")
+                st.info("🟢 **Green** = Forward | 🟠 **Orange dashed** = Failure/back | ⚪ **Gray** = Self-loop")
                 dot = create_kmp_dfa_visualization(pattern_clean)
                 nfa = pattern_to_nfa(pattern_clean)
                 dfa = nfa_to_dfa(nfa)
@@ -653,7 +611,6 @@ def main():
             if dot:
                 st.graphviz_chart(dot, use_container_width=True)
             
-            # DFA stats
             col_dfa1, col_dfa2, col_dfa3 = st.columns(3)
             with col_dfa1:
                 st.metric("States", dfa.num_states)
@@ -661,10 +618,6 @@ def main():
                 st.metric("Transitions", len(dfa.transitions))
             with col_dfa3:
                 st.metric("Accept States", len(dfa.accept_states))
-            
-            # Explanation for repeating patterns
-            if len(pattern_clean) != len(set(pattern_clean)) and '|' not in pattern_clean:
-                st.info(f"ℹ️ Pattern **{pattern_clean}** has repeating characters. The orange dashed arrows show failure transitions that allow the automaton to efficiently handle partial matches.")
         
         with tab3:
             st.subheader("Match Details")
@@ -673,34 +626,32 @@ def main():
                 import pandas as pd
                 df = pd.DataFrame(matches)
                 df.index = df.index + 1
-                df.columns = ['Start Position', 'End Position', 'Matched Sequence']
+                df.columns = ['Start', 'End', 'Sequence']
                 st.dataframe(df, use_container_width=True)
                 
                 csv = df.to_csv(index=True)
                 st.download_button(
-                    label="📥 Download Results as CSV",
+                    "📥 Download CSV",
                     data=csv,
                     file_name="dna_matches.csv",
                     mime="text/csv"
                 )
             else:
-                st.warning("No matches found for the given pattern.")
+                st.warning("No matches found.")
         
         with tab4:
             display_pattern = pattern_clean.split('|')[0] if '|' in pattern_clean else pattern_clean
             info = get_pattern_info(display_pattern)
             
             st.subheader(f"📖 {info['name']}")
-            
             st.markdown(f"""
 <div class="info-box">
 <p><strong>Category:</strong> {info['category']}</p>
 <p><strong>Description:</strong> {info['description']}</p>
-<p><strong>Biological Significance:</strong> {info['significance']}</p>
+<p><strong>Significance:</strong> {info['significance']}</p>
 </div>
 """, unsafe_allow_html=True)
             
-            # Special CAG analysis
             if display_pattern == 'CAG':
                 import re
                 st.markdown('---')
@@ -711,21 +662,20 @@ def main():
                     longest = max(cag_repeats, key=len)
                     repeat_count = len(longest) // 3
                     
-                    st.metric("Longest Consecutive CAG Repeat", f"{repeat_count} repeats")
+                    st.metric("Longest Consecutive Repeat", f"{repeat_count} CAGs")
                     
                     if repeat_count > 36:
-                        st.error(f"⚠️ WARNING: {repeat_count} CAG repeats detected. Values >36 are associated with Huntingtons disease.")
+                        st.error(f"⚠️ {repeat_count} repeats - Huntingtons disease range!")
                     elif repeat_count > 26:
-                        st.warning(f"⚡ CAUTION: {repeat_count} CAG repeats is in the intermediate range (27-35).")
+                        st.warning(f"⚡ {repeat_count} repeats - Intermediate range")
                     else:
-                        st.success(f"✅ {repeat_count} CAG repeats is within normal range (<26).")
+                        st.success(f"✅ {repeat_count} repeats - Normal range")
     
     # Footer
     st.markdown('---')
     st.markdown(
         '<p style="text-align: center; color: #666; font-size: 0.8rem;">'
-        '🧬 DNA Pattern Matcher | Theory of Computation Mini Project<br>'
-        'Built with Streamlit | Concepts: NFA, DFA, Thompsons Construction, Subset Construction'
+        '🧬 DNA Pattern Matcher | TOC Mini Project'
         '</p>',
         unsafe_allow_html=True
     )
