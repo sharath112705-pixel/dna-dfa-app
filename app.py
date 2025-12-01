@@ -1,189 +1,331 @@
+# app.py - Final Complete Streamlit App (v5 Stable)
+
 import streamlit as st
-import pandas as pd
-import re
 import graphviz
 from collections import defaultdict
-from itertools import count
 
-st.set_page_config(page_title="DNA Pattern Detector", layout="wide")
+# ============== PAGE CONFIG ==============
+st.set_page_config(
+    page_title="DNA Pattern Matcher",
+    page_icon="🧬",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-# CSS
+# ============== CUSTOM CSS ==============
 st.markdown("""
 <style>
-.match-highlight {
-    background-color: yellow;
-    font-weight: bold;
-}
-.info-box {
-    background: #1c1c1c;
-    padding: 12px;
-    border-radius: 10px;
-    margin-top: 10px;
-    color: white;
-}
+    .main-header {
+        text-align: center;
+        background: linear-gradient(90deg, #00d9ff, #00ff88);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-size: 2.5rem;
+        font-weight: bold;
+    }
+    .match-highlight {
+        background-color: #00ff88;
+        color: black;
+        padding: 2px 4px;
+        border-radius: 3px;
+        font-weight: bold;
+    }
+    .sequence-box {
+        background-color: #1a1a2e;
+        padding: 15px;
+        border-radius: 10px;
+        font-family: monospace;
+        word-wrap: break-word;
+        line-height: 1.8;
+    }
+    .info-box {
+        background-color: #16213e;
+        padding: 15px;
+        border-radius: 10px;
+        border-left: 4px solid #00d9ff;
+    }
 </style>
 """, unsafe_allow_html=True)
 
-class State:
-    _id = count()
 
-    def __init__(self, is_accept=False):
-        self.id = next(self._id)
-        self.transitions = defaultdict(set)
-        self.is_accept = is_accept
+# ============== SAMPLE DNA DATA ==============
+SAMPLE_SEQUENCES = {
+    "Simple Test": "ATGATCGATCGTAGATGCTAGCTGATCGATGTAAATAGCTGATCG",
+    "CAG Repeat Test": "ATGAAAGCAGCAGCAGCAGCAGTAAG",
+    "BRCA1 Fragment": "ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTT"
+}
+
+# =============================================
+# AUTOMATA STRUCTURES
+# =============================================
+
+class State:
+    def __init__(self, id, accept=False):
+        self.id = id
+        self.accept = accept
+        self.transitions = defaultdict(list)
+        self.eps = []
 
 
 class NFA:
-    def __init__(self, start, accept):
-        self.start = start
-        self.accept = accept
+    def __init__(self):
+        self.states = []
+        self.start = None
+        self.accept = []
+        self.alpha = ['A', 'T', 'G', 'C']
 
-
-def regex_to_nfa(pattern):
-    prev = State()
-    start = prev
-
-    for char in pattern:
-        new = State()
-        prev.transitions[char].add(new)
-        prev = new
-
-    prev.is_accept = True
-    return NFA(start, prev)
+    def add(self, accept=False):
+        s = State(len(self.states), accept)
+        self.states.append(s)
+        if accept:
+            self.accept.append(s)
+        return s
 
 
 class DFA:
     def __init__(self):
-        self.states = {}
-        self.start_state = None
-        self.accept_states = set()
-        self.transitions = defaultdict(dict)
+        self.start = 0
+        self.num = 0
+        self.accept = []
+        self.trans = []
+        self.alpha = ['A', 'T', 'G', 'C']
 
-    def add_transition(self, src, symbol, dest):
-        self.transitions[src][symbol] = dest
 
-    def next_state(self, state, symbol):
-        return self.transitions.get(state, {}).get(symbol)
+# ========== REGEX → NFA ==========
+
+def pattern_to_nfa(pattern):
+    nfa = NFA()
+    s0 = nfa.add()
+    nfa.start = s0
+    cur = s0
+
+    for i, c in enumerate(pattern):
+        final = (i == len(pattern)-1)
+        nxt = nfa.add(final)
+        cur.transitions[c].append(nxt)
+        cur = nxt
+
+    return nfa
+
+
+def alt_nfa(n1, n2):
+    n = NFA()
+    s = n.add()
+    n.start = s
+
+    s.eps.append(n1.start)
+    s.eps.append(n2.start)
+    n.states = [s] + n1.states + n2.states
+    n.accept = n1.accept + n2.accept
+
+    # Fix IDs
+    for i, st in enumerate(n.states):
+        st.id = i
+
+    return n
+
+
+def regex_to_nfa(regex):
+    parts = regex.split("|")
+    nfa = pattern_to_nfa(parts[0])
+    for p in parts[1:]:
+        nfa = alt_nfa(nfa, pattern_to_nfa(p))
+    return nfa
+
+
+# ========== NFA → DFA ==========
+
+def eps_close(states):
+    clk = set(states)
+    stack = list(states)
+    while stack:
+        s = stack.pop()
+        for ns in s.eps:
+            if ns not in clk:
+                clk.add(ns)
+                stack.append(ns)
+    return frozenset(clk)
+
+
+def step(states, sym):
+    r = set()
+    for s in states:
+        if sym in s.transitions:
+            r.update(s.transitions[sym])
+    return r
 
 
 def nfa_to_dfa(nfa):
-    alphabet = {"A", "T", "C", "G"}
-    dfa = DFA()
+    d = DFA()
+    M = {}
 
-    start = frozenset([nfa.start])
-    dfa.start_state = start
-    dfa.states[start] = True
+    def acc(ss):
+        return any(s.accept for s in ss)
 
-    unprocessed = [start]
+    start = eps_close([nfa.start])
+    M[start] = 0
+    if acc(start): d.accept.append(0)
 
-    while unprocessed:
-        current = unprocessed.pop()
-        for sym in alphabet:
-            nxt = set()
-            for s in current:
-                nxt.update(s.transitions.get(sym, []))
+    Q = [start]
+    count = 1
 
-            nxt = frozenset(nxt)
-            if not nxt:
-                continue
+    while Q:
+        x = Q.pop(0)
+        i = M[x]
+        for c in d.alpha:
+            y = step(x, c)
+            if not y: continue
+            y = eps_close(y)
 
-            if nxt not in dfa.states:
-                dfa.states[nxt] = True
-                unprocessed.append(nxt)
+            if y not in M:
+                M[y] = count
+                if acc(y): d.accept.append(count)
+                Q.append(y)
+                count += 1
 
-            dfa.add_transition(current, sym, nxt)
+            d.trans.append({"from": i, "symbol": c, "to": M[y]})
 
-    for s in dfa.states:
-        if any(st.is_accept for st in s):
-            dfa.accept_states.add(s)
-
-    return dfa
-
-
-def search_overlapping(dfa, seq):
-    matches = []
-    n = len(seq)
-
-    for i in range(n):
-        curr = dfa.start_state
-        for j in range(i, n):
-            curr = dfa.next_state(curr, seq[j])
-            if not curr:
-                break
-            if curr in dfa.accept_states:
-                matches.append({
-                    "start": i,
-                    "end": j + 1,
-                    "sequence": seq[i:j + 1]
-                })
-    return matches
+    d.num = count
+    return d
 
 
-def draw_dfa(dfa):
-    dot = graphviz.Digraph()
-    dot.attr(rankdir="LR")
+# ========== KMP DFA BUILDING (Optimized Searching) ==========
 
-    for s in dfa.states:
-        dot.node(str(id(s)), shape="doublecircle" if s in dfa.accept_states else "circle")
+def kmp(pattern):
+    m = len(pattern)
+    A = ['A', 'T', 'G', 'C']
 
-    added = set()
-    for src, trans in dfa.transitions.items():
-        for sym, dst in trans.items():
-            key = (id(src), sym, id(dst))
-            if key not in added:
-                added.add(key)
-                dot.edge(str(id(src)), str(id(dst)), label=sym)
+    if m == 0:
+        return {}, 0
 
-    return dot
+    T = {c: [0]*m for c in A}
+    T[pattern[0]][0] = 1
+    x = 0
 
+    for j in range(1, m):
+        for c in A: T[c][j] = T[c][x]
+        T[pattern[j]][j] = j+1
+        x = T[pattern[j]][x]
 
-def highlight(seq, matches):
-    seq_list = list(seq)
-    for m in matches:
-        for i in range(m["start"], m["end"]):
-            seq_list[i] = f"<span class='match-highlight'>{seq_list[i]}</span>"
-    return "".join(seq_list)
+    return T, m
 
 
-def show():
-    st.title("🧬 DNA Pattern Detection using Automata")
+def kmp_find(table, m, text):
+    r = []
+    s = 0
+    for i, c in enumerate(text):
+        if c in table:
+            s = table[c][s]
+        if s == m:
+            r.append((i-m+1, i))
+            s = 0
+    return r
 
-    seq = st.text_area("Enter DNA Sequence (A,T,G,C only):").upper()
-    pattern = st.text_input("Enter Pattern:").upper()
 
-    if st.button("🔍 Search"):
+# ========== HIGHLIGHT MATCHES UI ==========
 
-        if not re.fullmatch("[ATGC]+", seq):
-            st.error("❌ Only A,T,G,C allowed in DNA")
-            st.stop()
+def show_highlights(text, hits):
+    if not hits:
+        return f'<div class="sequence-box">{text}</div>'
+    out = []
+    last = -1
+    for a, b in hits:
+        if a > last+1: out.append(text[last+1:a])
+        out.append(f'<span class="match-highlight">{text[a:b+1]}</span>')
+        last = b
+    if last < len(text)-1:
+        out.append(text[last+1:])
+    return f'<div class="sequence-box">{"".join(out)}</div>'
 
-        if not re.fullmatch("[ATGC]+", pattern):
-            st.error("❌ Pattern invalid. Only A,T,G,C supported.")
-            st.stop()
 
-        nfa = regex_to_nfa(pattern)
-        dfa = nfa_to_dfa(nfa)
-        matches = search_overlapping(dfa, seq)
+# ========== INFO DB ==========
 
-        tab1, tab2, tab3 = st.tabs(["Sequence", "DFA", "Matches"])
+DB = {
+    "ATG": ("Start Codon", "Begins translation"),
+    "TAA": ("Stop Codon", "Ends protein"),
+    "TAG": ("Stop Codon", "Ends protein"),
+    "TGA": ("Stop Codon", "Ends protein"),
+    "CAG": ("CAG Repeat", "Linked to Huntington’s")
+}
 
-        with tab1:
-            st.markdown(highlight(seq, matches), unsafe_allow_html=True)
 
-        with tab2:
-            c1, c2, c3 = st.columns(3)
-            c1.metric("DFA States", len(dfa.states))
-            c2.metric("Transitions", sum(len(v) for v in dfa.transitions.values()))
-            c3.metric("Accept States", len(dfa.accept_states))
-            st.graphviz_chart(draw_dfa(dfa))
+# =============================================
+# STREAMLIT APP
+# =============================================
 
-        with tab3:
-            if not matches:
-                st.warning("No match found")
+def main():
+
+    # Sidebar
+    with st.sidebar:
+        st.header("⚙ Settings")
+        choice = st.selectbox("Sample DNA", list(SAMPLE_SEQUENCES.keys()))
+        dna_default = SAMPLE_SEQUENCES[choice]
+
+        mode = st.radio("Pattern Type", ["Custom", "ATG", "TAA|TAG|TGA", "CAG"])
+        patt = st.text_input("Pattern:", value="ATG" if mode == "Custom" else mode)
+
+    # Title
+    st.markdown('<h1 class="main-header">🧬 DNA Pattern Matcher</h1>', unsafe_allow_html=True)
+    st.markdown("---")
+
+    dna = st.text_area("Enter DNA Sequence", value=dna_default, height=150).upper()
+
+    if st.button("🔍 Search & Automaton"):
+        dna = "".join(c for c in dna if c in "ATGC")
+        patt = patt.upper()
+
+        if "|" in patt:
+            parts = patt.split("|")
+            hits = []
+            for p in parts:
+                t, m = kmp(p)
+                hits += kmp_find(t, m, dna)
+        else:
+            t, m = kmp(patt)
+            hits = kmp_find(t, m, dna)
+
+        st.success(f"Matches Found: {len(hits)}")
+
+        # Tabs
+        T1, T2, T3 = st.tabs(["📊 Results", "🔄 Automaton", "📖 Info"])
+
+        with T1:
+            st.markdown(show_highlights(dna, hits), unsafe_allow_html=True)
+
+        with T2:
+            st.subheader("Deterministic Finite Automaton")
+
+            if "|" in patt:
+                nfa = regex_to_nfa(patt)
+                dfa = nfa_to_dfa(nfa)
             else:
-                df = pd.DataFrame(matches)
-                st.dataframe(df)
+                nfa = pattern_to_nfa(patt)
+                dfa = nfa_to_dfa(nfa)
+
+            dot = graphviz.Digraph()
+            dot.attr(rankdir="LR")
+
+            # nodes
+            for i in range(dfa.num):
+                shape = "doublecircle" if i in dfa.accept else "circle"
+                dot.node(f"q{i}", shape=shape)
+
+            # edges
+            dot.node("start", shape="none")
+            dot.edge("start", "q0")
+            for tr in dfa.trans:
+                dot.edge(f"q{tr['from']}", f"q{tr['to']}", label=tr["symbol"])
+
+            st.graphviz_chart(dot, use_container_width=True)
+
+        with T3:
+            st.subheader("Pattern Information")
+            if patt in DB:
+                st.info(f"**{DB[patt][0]}** — {DB[patt][1]}")
+            else:
+                st.warning("Custom Pattern: No biological metadata")
+
 
 
 if __name__ == "__main__":
-    show()
+    main()
