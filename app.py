@@ -580,7 +580,7 @@ def main():
                     if st.session_state.anim_index < len(steps)-1:
                         st.session_state.anim_index += 1
                         time.sleep(step_delay)
-                        st.experimental_rerun()
+                        st.rerun()
                     else:
                         st.session_state.anim_playing = False
 
