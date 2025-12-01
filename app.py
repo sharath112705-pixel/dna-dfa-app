@@ -5,30 +5,25 @@ import graphviz
 from collections import defaultdict
 from itertools import count
 
-st.set_page_config(page_title="DNA DFA Pattern Detector", layout="wide")
+st.set_page_config(page_title="DNA Pattern Detector", layout="wide")
 
-# ----------------------------------
-# TITLE & CUSTOM CSS
-# ----------------------------------
+# CSS
 st.markdown("""
-    <h1 style="text-align:center;margin-bottom:0;">🧬 DNA Pattern Detection using DFA</h1>
-    <p style="text-align:center;margin-top:5px;">Regex → NFA → DFA → Match in DNA Sequence</p>
-    <style>
-        .match-highlight { background-color: yellow; font-weight: bold; }
-        .info-box {
-            background: #1c1c1c;
-            padding: 12px;
-            border-radius: 10px;
-            margin-top: 10px;
-            color: white;
-        }
-    </style>
+<style>
+.match-highlight {
+    background-color: yellow;
+    font-weight: bold;
+}
+.info-box {
+    background: #1c1c1c;
+    padding: 12px;
+    border-radius: 10px;
+    margin-top: 10px;
+    color: white;
+}
+</style>
 """, unsafe_allow_html=True)
 
-
-# ----------------------------------
-# NFA & DFA CLASSES
-# ----------------------------------
 class State:
     _id = count()
 
@@ -45,16 +40,16 @@ class NFA:
 
 
 def regex_to_nfa(pattern):
-    prev_state = State()
-    start = prev_state
+    prev = State()
+    start = prev
 
     for char in pattern:
-        new_state = State()
-        prev_state.transitions[char].add(new_state)
-        prev_state = new_state
+        new = State()
+        prev.transitions[char].add(new)
+        prev = new
 
-    prev_state.is_accept = True
-    return NFA(start, prev_state)
+    prev.is_accept = True
+    return NFA(start, prev)
 
 
 class DFA:
@@ -67,37 +62,37 @@ class DFA:
     def add_transition(self, src, symbol, dest):
         self.transitions[src][symbol] = dest
 
-    def get_next_state(self, state, symbol):
+    def next_state(self, state, symbol):
         return self.transitions.get(state, {}).get(symbol)
 
 
 def nfa_to_dfa(nfa):
+    alphabet = {"A", "T", "C", "G"}
     dfa = DFA()
-    initial = frozenset([nfa.start])
-    dfa.start_state = initial
-    dfa.states[initial] = True
 
-    unmarked = [initial]
-    alphabet = {"A", "T", "G", "C"}
+    start = frozenset([nfa.start])
+    dfa.start_state = start
+    dfa.states[start] = True
 
-    while unmarked:
-        current = unmarked.pop()
-        for symbol in alphabet:
-            next_set = set()
-            for state in current:
-                next_set.update(state.transitions.get(symbol, []))
+    unprocessed = [start]
 
-            next_state = frozenset(next_set)
-            if not next_state:
+    while unprocessed:
+        current = unprocessed.pop()
+        for sym in alphabet:
+            nxt = set()
+            for s in current:
+                nxt.update(s.transitions.get(sym, []))
+
+            nxt = frozenset(nxt)
+            if not nxt:
                 continue
 
-            if next_state not in dfa.states:
-                dfa.states[next_state] = True
-                unmarked.append(next_state)
+            if nxt not in dfa.states:
+                dfa.states[nxt] = True
+                unprocessed.append(nxt)
 
-            dfa.add_transition(current, symbol, next_state)
+            dfa.add_transition(current, sym, nxt)
 
-    # Identify accepting states
     for s in dfa.states:
         if any(st.is_accept for st in s):
             dfa.accept_states.add(s)
@@ -105,92 +100,90 @@ def nfa_to_dfa(nfa):
     return dfa
 
 
-# ----------------------------------
-# SEARCH MATCHES (supports overlapping)
-# ----------------------------------
-def search_pattern(dfa, seq):
+def search_overlapping(dfa, seq):
     matches = []
     n = len(seq)
 
-    for start in range(n):
-        current = dfa.start_state
-        for end in range(start, n):
-            char = seq[end]
-            current = dfa.get_next_state(current, char)
-            if not current:
+    for i in range(n):
+        curr = dfa.start_state
+        for j in range(i, n):
+            curr = dfa.next_state(curr, seq[j])
+            if not curr:
                 break
-            if current in dfa.accept_states:
-                matches.append((start, end + 1))
-
+            if curr in dfa.accept_states:
+                matches.append({
+                    "start": i,
+                    "end": j + 1,
+                    "sequence": seq[i:j + 1]
+                })
     return matches
 
 
-# ----------------------------------
-# GRAPHVIZ DFA VISUAL
-# ----------------------------------
 def draw_dfa(dfa):
     dot = graphviz.Digraph()
-    dot.attr(rankdir='LR')
+    dot.attr(rankdir="LR")
 
     for s in dfa.states:
-        dot.node(str(id(s)),
-                 shape="doublecircle" if s in dfa.accept_states else "circle")
+        dot.node(str(id(s)), shape="doublecircle" if s in dfa.accept_states else "circle")
 
-    edges_added = set()
+    added = set()
     for src, trans in dfa.transitions.items():
-        for char, dest in trans.items():
-            edge_key = (id(src), char, id(dest))
-            if edge_key not in edges_added:
-                dot.edge(str(id(src)), str(id(dest)), label=char)
-                edges_added.add(edge_key)
+        for sym, dst in trans.items():
+            key = (id(src), sym, id(dst))
+            if key not in added:
+                added.add(key)
+                dot.edge(str(id(src)), str(id(dst)), label=sym)
 
     return dot
 
 
-# ----------------------------------
-# UI INPUTS
-# ----------------------------------
-seq = st.text_area("Enter DNA Sequence (A,T,G,C only):").upper()
-pattern = st.text_input("Enter Pattern (simple regex): ").upper()
-
-if st.button("🔍 Search Now"):
-    if not re.fullmatch("[ATGC]+", seq):
-        st.error("❌ Invalid DNA sequence! Only A,T,G,C allowed.")
-        st.stop()
-
-    if not re.fullmatch("[ATGC]+", pattern):
-        st.error("❌ Pattern must only contain A,T,G,C (no special regex yet)")
-        st.stop()
-
-    # Processing pipeline
-    nfa = regex_to_nfa(pattern)
-    dfa = nfa_to_dfa(nfa)
-    matches = search_pattern(dfa, seq)
-
-    # Tabs
-    tab1, tab2, tab3 = st.tabs(["📍 Highlight", "🚀 DFA Graph", "📋 Match List"])
-
-    # TAB 1: Highlight in Sequence
-    with tab1:
-        display_seq = seq
-        for start, end in sorted(matches, reverse=True):
-            display_seq = (display_seq[:start] +
-                           f"<span class='match-highlight'>{display_seq[start:end]}</span>" +
-                           display_seq[end:])
-        st.markdown(display_seq, unsafe_allow_html=True)
-
-    # TAB 2: Graphviz DFA
-    with tab2:
-        st.graphviz_chart(draw_dfa(dfa))
-
-    # TAB 3: List Matches
-    with tab3:
-        if matches:
-            df = pd.DataFrame(matches, columns=["Start", "End"])
-            df["Matched Pattern"] = [seq[s:e] for s, e in matches]
-            st.dataframe(df)
-        else:
-            st.warning("No matches found ❌")
+def highlight(seq, matches):
+    seq_list = list(seq)
+    for m in matches:
+        for i in range(m["start"], m["end"]):
+            seq_list[i] = f"<span class='match-highlight'>{seq_list[i]}</span>"
+    return "".join(seq_list)
 
 
-st.info("📌 Example: Sequence = ATGCATGC, Pattern = ATG")
+def show():
+    st.title("🧬 DNA Pattern Detection using Automata")
+
+    seq = st.text_area("Enter DNA Sequence (A,T,G,C only):").upper()
+    pattern = st.text_input("Enter Pattern:").upper()
+
+    if st.button("🔍 Search"):
+
+        if not re.fullmatch("[ATGC]+", seq):
+            st.error("❌ Only A,T,G,C allowed in DNA")
+            st.stop()
+
+        if not re.fullmatch("[ATGC]+", pattern):
+            st.error("❌ Pattern invalid. Only A,T,G,C supported.")
+            st.stop()
+
+        nfa = regex_to_nfa(pattern)
+        dfa = nfa_to_dfa(nfa)
+        matches = search_overlapping(dfa, seq)
+
+        tab1, tab2, tab3 = st.tabs(["Sequence", "DFA", "Matches"])
+
+        with tab1:
+            st.markdown(highlight(seq, matches), unsafe_allow_html=True)
+
+        with tab2:
+            c1, c2, c3 = st.columns(3)
+            c1.metric("DFA States", len(dfa.states))
+            c2.metric("Transitions", sum(len(v) for v in dfa.transitions.values()))
+            c3.metric("Accept States", len(dfa.accept_states))
+            st.graphviz_chart(draw_dfa(dfa))
+
+        with tab3:
+            if not matches:
+                st.warning("No match found")
+            else:
+                df = pd.DataFrame(matches)
+                st.dataframe(df)
+
+
+if __name__ == "__main__":
+    show()
