@@ -232,19 +232,18 @@ def create_kmp_dfa_visualization(pattern):
     dfa_table, m = build_kmp_automaton(pattern)
     alphabet = ['A','T','G','C']
     dot = graphviz.Digraph(comment='KMP DFA', engine='dot')
-    # *** WHITE BACKGROUND + BLACK LABELS ***
-    dot.attr(rankdir='LR', bgcolor='white', fontcolor='black')
-    dot.attr('node', style='filled', fontcolor='black', color='black')
+    dot.attr(rankdir='LR', bgcolor='#0f1724', fontcolor='white')
+    dot.attr('node', style='filled', fontcolor='white')
     states_num = m + 1 if m > 0 else 1
     for i in range(states_num):
         if i == m and m>0:
-            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#dff7e6', color='black')
+            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#065f46')
         elif i == 0:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='white', color='black')
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#1e40af')
         else:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='white', color='black')
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#1e293b')
     dot.node('', shape='none', width='0')
-    dot.edge('', 'q0', color='black')
+    dot.edge('', 'q0', color='#ef4444')
     edge_map = defaultdict(list)
     for state in range(states_num):
         for char in alphabet:
@@ -259,46 +258,41 @@ def create_kmp_dfa_visualization(pattern):
             edge_map[(state, ns)].append(char)
     for (frm, to), chars in edge_map.items():
         lbl = ','.join(sorted(chars))
-        dot.edge(f"q{frm}", f"q{to}", label=lbl, color='black', fontcolor='black')
+        dot.edge(f"q{frm}", f"q{to}", label=lbl)
     return dot
 
 def create_nfa_graph(nfa_vis):
     dot = graphviz.Digraph(engine='dot')
-    # *** WHITE BACKGROUND + BLACK LABELS for NFA too ***
-    dot.attr(rankdir='LR', bgcolor='white', fontcolor='black')
-    dot.attr('node', style='filled', fontcolor='black', color='black')
-    dot.attr('edge', fontcolor='black', color='black')
+    dot.attr(rankdir='LR')
+    dot.attr('node', style='filled', fontcolor='white')
     for s in nfa_vis.states:
         if s.accept:
-            dot.node(f"s{s.id}", f"s{s.id}", shape='doublecircle', fillcolor='#dff7e6', color='black')
+            dot.node(f"s{s.id}", f"s{s.id}", shape='doublecircle', fillcolor='#065f46')
         else:
-            dot.node(f"s{s.id}", f"s{s.id}", shape='circle', fillcolor='white', color='black')
+            dot.node(f"s{s.id}", f"s{s.id}", shape='circle', fillcolor='#1e293b')
     dot.node('start', shape='none')
-    dot.edge('start', f"s{nfa_vis.start.id}", color='black')
+    dot.edge('start', f"s{nfa_vis.start.id}")
     for s in nfa_vis.states:
         for ch, dests in s.trans.items():
             for d in dests:
-                dot.edge(f"s{s.id}", f"s{d.id}", label=ch, color='black', fontcolor='black')
+                dot.edge(f"s{s.id}", f"s{d.id}", label=ch)
         for e in s.eps:
-            dot.edge(f"s{s.id}", f"s{e.id}", label='ε', style='dashed', color='black', fontcolor='black')
+            dot.edge(f"s{s.id}", f"s{e.id}", label='ε', style='dashed')
     return dot
 
 def create_dfa_graph(dfa_struct, highlight_state=None):
     dot = graphviz.Digraph(engine='dot')
-    # make DFA-from-NFA also white and readable
-    dot.attr(rankdir='LR', bgcolor='white', fontcolor='black')
-    dot.attr('node', style='filled', fontcolor='black', color='black')
-    dot.attr('edge', fontcolor='black', color='black')
+    dot.attr(rankdir='LR')
     for i in range(dfa_struct['num']):
-        fill = '#dff7e6' if i in dfa_struct['accepts'] else 'white'
+        fill = '#0ea5a4' if i in dfa_struct['accepts'] else '#1e293b'
         if highlight_state is not None and i == highlight_state:
-            dot.node(f"q{i}", f"q{i}", style='filled', fillcolor='#f7d6ba', color='black')
+            dot.node(f"q{i}", f"q{i}", style='filled', fillcolor='#f97316')
         else:
-            dot.node(f"q{i}", f"q{i}", style='filled', fillcolor=fill, color='black')
+            dot.node(f"q{i}", f"q{i}", style='filled', fillcolor=fill)
     dot.node('start', shape='none')
-    dot.edge('start', 'q0', color='black')
+    dot.edge('start', 'q0')
     for t in dfa_struct['trans']:
-        dot.edge(f"q{t['from']}", f"q{t['to']}", label=t['symbol'], color='black', fontcolor='black')
+        dot.edge(f"q{t['from']}", f"q{t['to']}", label=t['symbol'])
     return dot
 
 # ============== UI helpers ==============
@@ -586,7 +580,6 @@ def main():
                     if st.session_state.anim_index < len(steps)-1:
                         st.session_state.anim_index += 1
                         time.sleep(step_delay)
-                        # <-- changed to st.rerun() to match newer Streamlit API
                         st.rerun()
                     else:
                         st.session_state.anim_playing = False
