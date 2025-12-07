@@ -16,7 +16,7 @@ except Exception:
     REPORTLAB_AVAILABLE = False
 
 # ============== PAGE CONFIG & CSS (logo + watermark) ==============
-st.set_page_config(page_title="DNA Pattern Matcher (Upgraded)", page_icon="🧬", layout="wide")
+st.set_page_config(page_title="DNA Pattern Matcher", page_icon="🧬", layout="wide")
 
 st.markdown("""
 <style>
@@ -41,7 +41,7 @@ st.markdown("""
     </g>
   </svg>
   <div>
-    <div class="main-header">🧬 DNA Pattern Matcher — Upgraded</div>
+    <div class="main-header">🧬 DNA Pattern Matcher</div>
     <div class="small-muted">Automata visualization • fast multi-pattern search • traversal animation</div>
   </div>
 </div>
