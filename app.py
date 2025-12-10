@@ -523,26 +523,22 @@ def main():
         # ---------- DFA TAB ----------
         with tab_auto:
             st.subheader("Deterministic Automaton (constructed from selected pattern)")
-            if len(patterns) == 1:
-                dot = create_kmp_dfa_visualization(patterns[0])
-                st.caption("KMP DFA (All transitions shown).")
-                if dot:
-                    st.graphviz_chart(dot, use_container_width=True)
-            else:
-                # For multiple patterns, build NFA for (p1|p2|...) then subset to DFA
-                nfa_vis = regex_to_nfa_vis("|".join(patterns))
-                dfa_struct = nfa_vis_to_dfa(nfa_vis)
-                dot = create_dfa_graph(dfa_struct)
-                st.caption("DFA (from alternation NFA via subset construction); unified colors.")
-                st.graphviz_chart(dot, use_container_width=True)
+            current_pattern = st.session_state.search_data['patterns'][0]
+            # ✅ ALWAYS USE PURE KMP DFA FOR SINGLE PATTERN
+            dot = create_kmp_dfa_visualization(current_pattern)
+            st.caption(f"KMP DFA for pattern: {current_pattern}")
+            st.graphviz_chart(dot, use_container_width=True)
+
 
         # ---------- NFA TAB ----------
         with tab_nfa:
             st.subheader("NFA Visualization (structure with ε transitions)")
-            nfa_vis = regex_to_nfa_vis("|".join(patterns))
+            current_pattern = st.session_state.search_data['patterns'][0]
+            nfa_vis = regex_to_nfa_vis(current_pattern)
             dotn = create_nfa_graph(nfa_vis)
-            st.caption("NFA graph (states from left to right). Epsilon transitions are dashed.")
+            st.caption(f"NFA for pattern: {current_pattern}")
             st.graphviz_chart(dotn, use_container_width=True)
+
 
         # ---------- MATCH TABLE TAB ----------
         with tab_details:
