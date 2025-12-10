@@ -569,16 +569,16 @@ def main():
                     st.session_state.anim_playing = not st.session_state.anim_playing
 
                 # ✅✅✅ FIXED STEP-BY-STEP AUTOPLAY (NO MORE INSTANT JUMP)
-if st.session_state.anim_playing:
-    now = time.time()
-    if now - st.session_state.anim_last_time >= step_delay:
-        st.session_state.anim_last_time = now
+                if st.session_state.anim_playing:
+                    now = time.time()
+                     if now - st.session_state.anim_last_time >= step_delay:
+                         st.session_state.anim_last_time = now
 
-        if st.session_state.anim_index < len(steps) - 1:
-            st.session_state.anim_index += 1
-            st.experimental_rerun()
-        else:
-            st.session_state.anim_playing = False
+                         if st.session_state.anim_index < len(steps) - 1:
+                             st.session_state.anim_index += 1
+                             st.experimental_rerun()
+                         else:
+                             st.session_state.anim_playing = False
 
 
                 cur_idx = st.session_state.anim_index
