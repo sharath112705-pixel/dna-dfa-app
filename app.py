@@ -30,22 +30,6 @@ st.markdown("""
 .small-muted { color: #94a3b8; font-size: 0.9rem; }
 .controls { display:flex; gap:8px; align-items:center; }
 </style>
-<div class="header">
-  <svg class="logo-svg" viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">
-    <defs><linearGradient id="g1" x1="0" x2="1"><stop offset="0" stop-color="#00d9ff"/><stop offset="1" stop-color="#00ff88"/></linearGradient></defs>
-    <rect width="64" height="64" rx="12" fill="#071029"/>
-    <g transform="translate(8,8)">
-      <path d="M6 0 C10 6, 18 6, 22 0" stroke="url(#g1)" stroke-width="2.6" fill="none" />
-      <circle cx="6" cy="24" r="6" fill="url(#g1)"/>
-      <circle cx="22" cy="24" r="6" fill="#0ea5a4"/>
-    </g>
-  </svg>
-  <div>
-    <div class="main-header">🧬 DNA Pattern Matcher</div>
-    <div class="small-muted">Automata visualization • fast multi-pattern search • traversal animation</div>
-  </div>
-</div>
-<div class="watermark">DNA</div>
 """, unsafe_allow_html=True)
 
 # ============== SAMPLE DATA ==============
@@ -231,19 +215,25 @@ def create_kmp_dfa_visualization(pattern):
         return None
     dfa_table, m = build_kmp_automaton(pattern)
     alphabet = ['A','T','G','C']
+
+    # UPDATED: white background, dark text/arrows for visibility
     dot = graphviz.Digraph(comment='KMP DFA', engine='dot')
-    dot.attr(rankdir='LR', bgcolor='#0f1724', fontcolor='white')
-    dot.attr('node', style='filled', fontcolor='white')
+    dot.attr(rankdir='LR', bgcolor='white')
+    dot.attr('node', style='filled', fontcolor='black')
+    dot.attr('edge', color='black', fontcolor='black')
+
     states_num = m + 1 if m > 0 else 1
     for i in range(states_num):
         if i == m and m>0:
-            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#065f46')
+            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#A7F3D0')  # accept state
         elif i == 0:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#1e40af')
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#93C5FD')       # start state
         else:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#1e293b')
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#E5E7EB')       # normal state
+
     dot.node('', shape='none', width='0')
-    dot.edge('', 'q0', color='#ef4444')
+    dot.edge('', 'q0')
+
     edge_map = defaultdict(list)
     for state in range(states_num):
         for char in alphabet:
