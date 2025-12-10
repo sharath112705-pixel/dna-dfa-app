@@ -377,13 +377,15 @@ def on_pattern_choice_change():
         # keep existing pattern_field (or default)
         st.session_state.pattern_field = st.session_state.get('pattern_field', 'ATG')
 
-# animation session variables
+# animation session variables  ✅ FIXED
 if 'anim_index' not in st.session_state:
     st.session_state.anim_index = 0
 if 'anim_steps' not in st.session_state:
     st.session_state.anim_steps = []
 if 'anim_playing' not in st.session_state:
     st.session_state.anim_playing = False
+if 'anim_last_time' not in st.session_state:   # ✅ NEW TIMER
+    st.session_state.anim_last_time = time.time()
 if 'search_data' not in st.session_state:
     st.session_state.search_data = None
 
@@ -566,13 +568,18 @@ def main():
                 if c4.button("⏯ Play/Pause"):
                     st.session_state.anim_playing = not st.session_state.anim_playing
 
-                if st.session_state.anim_playing:
-                    if st.session_state.anim_index < len(steps)-1:
-                        st.session_state.anim_index += 1
-                        time.sleep(step_delay)
-                        st.rerun()
-                    else:
-                        st.session_state.anim_playing = False
+                # ✅✅✅ FIXED STEP-BY-STEP AUTOPLAY (NO MORE INSTANT JUMP)
+if st.session_state.anim_playing:
+    now = time.time()
+    if now - st.session_state.anim_last_time >= step_delay:
+        st.session_state.anim_last_time = now
+
+        if st.session_state.anim_index < len(steps) - 1:
+            st.session_state.anim_index += 1
+            st.experimental_rerun()
+        else:
+            st.session_state.anim_playing = False
+
 
                 cur_idx = st.session_state.anim_index
                 disp_parts = []
