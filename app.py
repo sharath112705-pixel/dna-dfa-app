@@ -461,15 +461,21 @@ def main():
                 rows.append({'Pattern': patterns[pid], 'Start': a, 'End': b, 'Sequence': dna_clean[a:b+1], 'PatternID': pid})
         df = pd.DataFrame(rows)
 
+        # ✅✅✅ HARD RESET OLD VISUAL & ANIMATION DATA
+        st.session_state.search_data = None
+        st.session_state.anim_steps = []
+        st.session_state.anim_index = 0
+        st.session_state.anim_playing = False
+        if 'anim_last_time' in st.session_state:
+            st.session_state.anim_last_time = time.time()
+
+        # ✅✅✅ NOW STORE FRESH SEARCH DATA
         st.session_state.search_data = {
             'dna': dna_clean,
             'patterns': patterns,
-            'matches_by_pattern': matches_by_pattern,
+            'matches_by_pattern': matches_by_pattern
             'df': df
         }
-        st.session_state.anim_index = 0
-        st.session_state.anim_steps = []
-        st.session_state.anim_playing = False
 
     if st.session_state.search_data is not None:
         data = st.session_state.search_data
@@ -489,13 +495,21 @@ def main():
 
         with tab_auto:
             st.subheader("Deterministic Automaton (constructed from selected pattern)")
-            if len(patterns) == 1:
-                dot = create_kmp_dfa_visualization(patterns[0])
-                st.caption("KMP DFA (All transitions shown).")
-                if dot:
-                    st.graphviz_chart(dot, use_container_width=True)
+            # ✅ ALWAYS DRAW DFA FROM CURRENT PATTERN
+            current_pattern = st.session_state.search_data['patterns'][0]
+            dot = create_kmp_dfa_visualization(current_pattern)
+            st.graphviz_chart(dot, use_container_width=True)
+
+            st.caption("KMP DFA (All transitions shown).")
+            if dot:
+                st.graphviz_chart(dot, use_container_width=True)
             else:
-                nfa_vis = regex_to_nfa_vis("|".join(patterns))
+                # ✅ ALWAYS BUILD NFA FROM CURRENT PATTERN ONLY
+                current_pattern = st.session_state.search_data['patterns'][0]
+                nfa_vis = regex_to_nfa_vis(current_pattern)
+                dotn = create_nfa_graph(nfa_vis)
+                st.graphviz_chart(dotn, use_container_width=True)
+
                 dfa_struct = nfa_vis_to_dfa(nfa_vis)
                 dot = create_dfa_graph(dfa_struct)
                 st.caption("DFA (from alternation NFA via subset construction); unified colors.")
