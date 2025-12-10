@@ -575,7 +575,7 @@ def main():
                         st.session_state.anim_last_time = now
                         if st.session_state.anim_index < len(steps) - 1:
                             st.session_state.anim_index += 1
-                            st.experimental_rerun()
+                            st.rerun()
                         else:
                             st.session_state.anim_playing = False
 
