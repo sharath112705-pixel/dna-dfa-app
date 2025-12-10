@@ -1,4 +1,4 @@
-# app.py - Upgraded DNA Pattern Matcher with fixes for IndexError and sidebar field updates
+# app.py - Upgraded DNA Pattern Matcher with fixed traversal + fresh visuals per run
 import streamlit as st
 import graphviz
 from collections import defaultdict, deque
@@ -192,7 +192,8 @@ def nfa_vis_to_dfa(nfa_vis):
     trans = []
     accepts = set()
     idx = 1
-    if any(s.accept for s in start): accepts.add(0)
+    if any(s.accept for s in start):
+        accepts.add(0)
     while q:
         cur = q.pop(0)
         cur_id = mapping[cur]
@@ -200,11 +201,13 @@ def nfa_vis_to_dfa(nfa_vis):
             nxtset = set()
             for s in cur:
                 nxtset.update(s.trans.get(ch, []))
-            if not nxtset: continue
+            if not nxtset:
+                continue
             nxt = eps_close(nxtset)
             if nxt not in mapping:
                 mapping[nxt] = idx
-                if any(s.accept for s in nxt): accepts.add(idx)
+                if any(s.accept for s in nxt):
+                    accepts.add(idx)
                 q.append(nxt)
                 idx += 1
             trans.append({'from': cur_id, 'to': mapping[nxt], 'symbol': ch})
@@ -216,7 +219,7 @@ def create_kmp_dfa_visualization(pattern):
     dfa_table, m = build_kmp_automaton(pattern)
     alphabet = ['A','T','G','C']
 
-    # UPDATED: white background, dark text/arrows for visibility
+    # white background, dark text/arrows for visibility
     dot = graphviz.Digraph(comment='KMP DFA', engine='dot')
     dot.attr(rankdir='LR', bgcolor='white')
     dot.attr('node', style='filled', fontcolor='black')
@@ -224,7 +227,7 @@ def create_kmp_dfa_visualization(pattern):
 
     states_num = m + 1 if m > 0 else 1
     for i in range(states_num):
-        if i == m and m>0:
+        if i == m and m > 0:
             dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#A7F3D0')  # accept state
         elif i == 0:
             dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#93C5FD')       # start state
@@ -240,10 +243,8 @@ def create_kmp_dfa_visualization(pattern):
             if m > 0 and state < m:
                 ns = dfa_table[char][state]
             elif m > 0 and state == m:
-                # accept state transitions fallback to state 0 transitions in KMP visualization
                 ns = dfa_table[char][0]
             else:
-                # m == 0 (degenerate): always stay at 0
                 ns = 0
             edge_map[(state, ns)].append(char)
     for (frm, to), chars in edge_map.items():
@@ -292,8 +293,8 @@ def colored_highlight_text(dna, matches_by_pattern):
     n = len(dna)
     owner = [None] * n
     for pid, matches in enumerate(matches_by_pattern):
-        for (a,b) in matches:
-            for i in range(a, b+1):
+        for (a, b) in matches:
+            for i in range(a, b + 1):
                 if 0 <= i < n and owner[i] is None:
                     owner[i] = pid
     parts = []
@@ -355,7 +356,7 @@ def create_pdf_report(title, dna, patterns, matches_by_pattern):
     buffer.seek(0)
     return buffer.read()
 
-# ============== session state initialization and callbacks for sidebar updates ==============
+# ============== session state initialization and callbacks ==============
 if 'dna_text' not in st.session_state:
     st.session_state.dna_text = SAMPLE_SEQUENCES['Simple Test']
 if 'pattern_field' not in st.session_state:
@@ -374,7 +375,6 @@ def on_pattern_choice_change():
     if choice != 'Custom':
         st.session_state.pattern_field = choice
     else:
-        # keep existing pattern_field (or default)
         st.session_state.pattern_field = st.session_state.get('pattern_field', 'ATG')
 
 # animation session variables
@@ -390,33 +390,54 @@ if 'search_data' not in st.session_state:
 # ============== MAIN APP UI ==============
 def main():
     st.sidebar.header("⚙️ Settings")
-    sample_choice = st.sidebar.selectbox("Choose sample:", list(SAMPLE_SEQUENCES.keys()), key='sample_choice', on_change=on_sample_change)
-    quick_pattern = st.sidebar.radio("Quick patterns:", ['Custom', 'ATG', 'TAA|TAG|TGA', 'TATA', 'GAATTC', 'CAG', 'AATAAA'], key='pattern_choice', on_change=on_pattern_choice_change)
+    st.sidebar.selectbox(
+        "Choose sample:",
+        list(SAMPLE_SEQUENCES.keys()),
+        key='sample_choice',
+        on_change=on_sample_change
+    )
+    st.sidebar.radio(
+        "Quick patterns:",
+        ['Custom', 'ATG', 'TAA|TAG|TGA', 'TATA', 'GAATTC', 'CAG', 'AATAAA'],
+        key='pattern_choice',
+        on_change=on_pattern_choice_change
+    )
     st.sidebar.markdown("---")
     st.sidebar.info("TOC: NFA/DFA, KMP, Aho-Corasick (fast multi-pattern search)")
 
     st.markdown("### Sequence & Pattern Input")
-    col1, col2 = st.columns([3,1])
+    col1, col2 = st.columns([3, 1])
     with col1:
-        dna_input = st.text_area("Enter DNA sequence (A,T,G,C only):", value=st.session_state.dna_text, height=170, key='dna_text')
+        dna_input = st.text_area(
+            "Enter DNA sequence (A,T,G,C only):",
+            value=st.session_state.dna_text,
+            height=170,
+            key='dna_text'
+        )
     with col2:
-        if st.session_state.pattern_choice == 'Custom':
-            pattern_input = st.text_input("Enter pattern:", value=st.session_state.pattern_field, key='pattern_field')
-        else:
-            pattern_input = st.text_input("Enter pattern:", value=st.session_state.pattern_field, key='pattern_field')
+        pattern_input = st.text_input(
+            "Enter pattern:",
+            value=st.session_state.pattern_field,
+            key='pattern_field'
+        )
         st.caption("Example patterns: ATG, TATA, TAA|TAG|TGA")
 
     dna_clean = ''.join([c for c in dna_input.upper() if c in 'ATGC'])
     pattern_clean = pattern_input.upper().strip()
 
     st.markdown("### Search Options")
-    col_a, col_b, col_c = st.columns([1,1,1])
+    col_a, col_b, col_c = st.columns([1, 1, 1])
     with col_a:
         use_aho = st.checkbox("Use Aho–Corasick for multi-pattern (fast)", value=True)
     with col_b:
-        enable_animation = st.checkbox("Enable traversal animation (manual + autoplay)", value=True)
+        enable_animation = st.checkbox("Enable traversal animation (manual only)", value=True)
     with col_c:
-        max_matches = st.number_input("Max matches to show per pattern", min_value=10, max_value=10000, value=500)
+        max_matches = st.number_input(
+            "Max matches to show per pattern",
+            min_value=10,
+            max_value=10000,
+            value=500
+        )
 
     run = st.button("🔍 Build Automaton & Search")
 
@@ -457,23 +478,26 @@ def main():
 
         rows = []
         for pid, matches in enumerate(matches_by_pattern):
-            for (a,b) in matches:
-                rows.append({'Pattern': patterns[pid], 'Start': a, 'End': b, 'Sequence': dna_clean[a:b+1], 'PatternID': pid})
+            for (a, b) in matches:
+                rows.append({
+                    'Pattern': patterns[pid],
+                    'Start': a,
+                    'End': b,
+                    'Sequence': dna_clean[a:b+1],
+                    'PatternID': pid
+                })
         df = pd.DataFrame(rows)
 
-        # ✅✅✅ HARD RESET OLD VISUAL & ANIMATION DATA
-        st.session_state.search_data = None
-        st.session_state.anim_steps = []
+        # reset animation vars
         st.session_state.anim_index = 0
+        st.session_state.anim_steps = []
         st.session_state.anim_playing = False
-        if 'anim_last_time' in st.session_state:
-            st.session_state.anim_last_time = time.time()
 
-        # ✅✅✅ NOW STORE FRESH SEARCH DATA
+        # store fresh search data (used by all tabs)
         st.session_state.search_data = {
             'dna': dna_clean,
             'patterns': patterns,
-            'matches_by_pattern': matches_by_pattern
+            'matches_by_pattern': matches_by_pattern,
             'df': df
         }
 
@@ -484,8 +508,11 @@ def main():
         matches_by_pattern = data['matches_by_pattern']
         df = data['df']
 
-        tab_results, tab_auto, tab_nfa, tab_details, tab_anim, tab_download = st.tabs(["📊 Results", "🔄 DFA (KMP)", "🧩 NFA Visual", "📋 Match Details", "🎬 Traversal Animation", "📥 Export"])
+        tab_results, tab_auto, tab_nfa, tab_details, tab_anim, tab_download = st.tabs(
+            ["📊 Results", "🔄 DFA (KMP)", "🧩 NFA Visual", "📋 Match Details", "🎬 Traversal Animation", "📥 Export"]
+        )
 
+        # ---------- RESULTS TAB ----------
         with tab_results:
             st.subheader("Highlighted Matches (text only, colored per pattern)")
             html = colored_highlight_text(dna, matches_by_pattern)
@@ -493,28 +520,23 @@ def main():
             st.markdown("---")
             st.info(f"Patterns: {', '.join(patterns)}  —  Total matches: {len(df)}")
 
+        # ---------- DFA TAB ----------
         with tab_auto:
             st.subheader("Deterministic Automaton (constructed from selected pattern)")
-            # ✅ ALWAYS DRAW DFA FROM CURRENT PATTERN
-            current_pattern = st.session_state.search_data['patterns'][0]
-            dot = create_kmp_dfa_visualization(current_pattern)
-            st.graphviz_chart(dot, use_container_width=True)
-
-            st.caption("KMP DFA (All transitions shown).")
-            if dot:
-                st.graphviz_chart(dot, use_container_width=True)
+            if len(patterns) == 1:
+                dot = create_kmp_dfa_visualization(patterns[0])
+                st.caption("KMP DFA (All transitions shown).")
+                if dot:
+                    st.graphviz_chart(dot, use_container_width=True)
             else:
-                # ✅ ALWAYS BUILD NFA FROM CURRENT PATTERN ONLY
-                current_pattern = st.session_state.search_data['patterns'][0]
-                nfa_vis = regex_to_nfa_vis(current_pattern)
-                dotn = create_nfa_graph(nfa_vis)
-                st.graphviz_chart(dotn, use_container_width=True)
-
+                # For multiple patterns, build NFA for (p1|p2|...) then subset to DFA
+                nfa_vis = regex_to_nfa_vis("|".join(patterns))
                 dfa_struct = nfa_vis_to_dfa(nfa_vis)
                 dot = create_dfa_graph(dfa_struct)
                 st.caption("DFA (from alternation NFA via subset construction); unified colors.")
                 st.graphviz_chart(dot, use_container_width=True)
 
+        # ---------- NFA TAB ----------
         with tab_nfa:
             st.subheader("NFA Visualization (structure with ε transitions)")
             nfa_vis = regex_to_nfa_vis("|".join(patterns))
@@ -522,25 +544,40 @@ def main():
             st.caption("NFA graph (states from left to right). Epsilon transitions are dashed.")
             st.graphviz_chart(dotn, use_container_width=True)
 
+        # ---------- MATCH TABLE TAB ----------
         with tab_details:
             st.subheader("Match Table")
             if df.empty:
                 st.warning("No matches to show.")
             else:
-                st.dataframe(df[['Pattern','Start','End','Sequence']])
+                st.dataframe(df[['Pattern', 'Start', 'End', 'Sequence']])
                 st.markdown("---")
                 st.caption("Tip: Use the Traversal tab to step through DFA transitions for a particular match.")
 
+        # ---------- TRAVERSAL ANIMATION TAB ----------
         with tab_anim:
             st.subheader("Traversal Animation — manual step-by-step")
-            colp, colm, colc = st.columns([1,1,2])
+            colp, colm, colc = st.columns([1, 1, 2])
             with colp:
-                pid = st.number_input("Pattern index (0-based)", min_value=0, max_value=max(0, len(patterns)-1), value=0)
+                pid = st.number_input(
+                    "Pattern index (0-based)",
+                    min_value=0,
+                    max_value=max(0, len(patterns) - 1),
+                    value=0
+                )
             with colm:
-                occ_max = max(0, len(matches_by_pattern[pid])-1)
-                occ_idx = st.number_input("Occurrence index (0-based)", min_value=0, max_value=occ_max, value=0)
+                occ_max = max(0, len(matches_by_pattern[pid]) - 1)
+                occ_idx = st.number_input(
+                    "Occurrence index (0-based)",
+                    min_value=0,
+                    max_value=occ_max,
+                    value=0
+                )
             with colc:
-                step_delay = st.slider("Step delay (seconds) [only for understanding]", 0.05, 1.5, 0.35)
+                st.slider(
+                    "Step delay (seconds) [for understanding only]",
+                    0.05, 1.5, 0.35
+                )
 
             chosen_pattern = patterns[pid]
             dfa_table, m = build_kmp_automaton(chosen_pattern)
@@ -551,9 +588,12 @@ def main():
                 start_idx, end_idx = matches_list[occ_idx]
                 context = 6
                 win_start = max(0, start_idx - context)
-                win_end = min(len(dna)-1, end_idx + context)
-                subseq = dna[win_start: win_end+1]
-                st.write(f"Animating pattern '{chosen_pattern}' occurrence at [{start_idx} - {end_idx}] — window [{win_start}:{win_end}]")
+                win_end = min(len(dna) - 1, end_idx + context)
+                subseq = dna[win_start: win_end + 1]
+                st.write(
+                    f"Animating pattern '{chosen_pattern}' occurrence at "
+                    f"[{start_idx} - {end_idx}] — window [{win_start}:{win_end}]"
+                )
                 steps = []
                 state = 0
                 for i, ch in enumerate(subseq):
@@ -567,31 +607,34 @@ def main():
 
                 st.session_state.anim_steps = steps
 
-                # ✅ ONLY MANUAL CONTROLS NOW
-                c1, c2, c3 = st.columns([1,1,1])
+                # manual controls only
+                c1, c2, c3 = st.columns([1, 1, 1])
                 if c1.button("⏮ Reset"):
                     st.session_state.anim_index = 0
                 if c2.button("◀ Back"):
                     st.session_state.anim_index = max(0, st.session_state.anim_index - 1)
                 if c3.button("Next ▶"):
-                    st.session_state.anim_index = min(len(steps)-1, st.session_state.anim_index + 1)
+                    st.session_state.anim_index = min(len(steps) - 1, st.session_state.anim_index + 1)
 
                 cur_idx = st.session_state.anim_index
                 disp_parts = []
                 for i_global, ch in enumerate(subseq, start=win_start):
                     rel = i_global - win_start
                     style = ""
-                    if i_global >= start_idx and i_global <= end_idx:
+                    if start_idx <= i_global <= end_idx:
                         style = f"background:{PATTERN_COLORS[pid % len(PATTERN_COLORS)]};"
                     if rel == steps[cur_idx]['idx']:
                         style += "border:2px solid #ffffff;"
                     disp_parts.append(f"<span style='padding:2px 3px; margin:1px; {style}'>{ch}</span>")
-                st.markdown("<div class='sequence-box'>" + "".join(disp_parts) + "</div>", unsafe_allow_html=True)
+                st.markdown(
+                    "<div class='sequence-box'>" + "".join(disp_parts) + "</div>",
+                    unsafe_allow_html=True
+                )
 
                 states_num = m + 1 if m > 0 else 1
-                dfa_struct = {'num': states_num, 'trans': [], 'accepts': {m} if m>0 else {0}}
+                dfa_struct = {'num': states_num, 'trans': [], 'accepts': {m} if m > 0 else {0}}
                 for s in range(states_num):
-                    for ch in ['A','T','G','C']:
+                    for ch in ['A', 'T', 'G', 'C']:
                         if m > 0 and s < m:
                             ns = dfa_table[ch][s]
                         elif m > 0 and s == m:
@@ -603,20 +646,33 @@ def main():
                 dotdfa = create_dfa_graph(dfa_struct, highlight_state=cur_state)
                 st.graphviz_chart(dotdfa, use_container_width=True)
 
+        # ---------- EXPORT TAB ----------
         with tab_download:
             st.subheader("Export Results")
             if df.empty:
                 st.warning("No results to export.")
             else:
-                csv_bytes = df_to_csv_bytes(df[['Pattern','Start','End','Sequence']])
-                st.download_button("Download CSV", data=csv_bytes, file_name="dna_matches.csv", mime="text/csv")
+                csv_bytes = df_to_csv_bytes(df[['Pattern', 'Start', 'End', 'Sequence']])
+                st.download_button(
+                    "Download CSV",
+                    data=csv_bytes,
+                    file_name="dna_matches.csv",
+                    mime="text/csv"
+                )
                 if REPORTLAB_AVAILABLE:
-                    pdf_bytes = create_pdf_report("DNA Pattern Matches Report", dna, patterns, matches_by_pattern)
+                    pdf_bytes = create_pdf_report(
+                        "DNA Pattern Matches Report",
+                        dna, patterns, matches_by_pattern
+                    )
                     if pdf_bytes:
-                        st.download_button("Download PDF Report", data=pdf_bytes, file_name="dna_matches_report.pdf", mime="application/pdf")
+                        st.download_button(
+                            "Download PDF Report",
+                            data=pdf_bytes,
+                            file_name="dna_matches_report.pdf",
+                            mime="application/pdf"
+                        )
                 else:
                     st.info("PDF export requires reportlab. Install via `pip install reportlab` to enable PDF download.")
-
     else:
         st.caption("Click 'Build Automaton & Search' to run detection. Use sidebar to choose sample/patterns.")
 
