@@ -389,7 +389,7 @@ if 'search_data' not in st.session_state:
 
 # ============== MAIN APP UI ==============
 def main():
-    st.sidebar.header(⚙️ Settings")
+    st.sidebar.header("⚙️ Settings")
     sample_choice = st.sidebar.selectbox("Choose sample:", list(SAMPLE_SEQUENCES.keys()), key='sample_choice', on_change=on_sample_change)
     quick_pattern = st.sidebar.radio("Quick patterns:", ['Custom', 'ATG', 'TAA|TAG|TGA', 'TATA', 'GAATTC', 'CAG', 'AATAAA'], key='pattern_choice', on_change=on_pattern_choice_change)
     st.sidebar.markdown("---")
@@ -518,7 +518,7 @@ def main():
                 st.caption("Tip: Use the Traversal tab to step through DFA transitions for a particular match.")
 
         with tab_anim:
-            st.subheader("Traversal Animation — manual step-by-step")
+            st.subheader("Traversal Animation — manual steps + autoplay")
             colp, colm, colc = st.columns([1,1,2])
             with colp:
                 pid = st.number_input("Pattern index (0-based)", min_value=0, max_value=max(0, len(patterns)-1), value=0)
@@ -526,7 +526,7 @@ def main():
                 occ_max = max(0, len(matches_by_pattern[pid])-1)
                 occ_idx = st.number_input("Occurrence index (0-based)", min_value=0, max_value=occ_max, value=0)
             with colc:
-                step_delay = st.slider("Step delay (seconds) [only for understanding]", 0.05, 1.5, 0.35)
+                step_delay = st.slider("Auto-play delay (seconds)", 0.05, 1.5, 0.35)
 
             chosen_pattern = patterns[pid]
             dfa_table, m = build_kmp_automaton(chosen_pattern)
@@ -539,7 +539,7 @@ def main():
                 win_start = max(0, start_idx - context)
                 win_end = min(len(dna)-1, end_idx + context)
                 subseq = dna[win_start: win_end+1]
-                st.write(f"Animating pattern '{chosen_pattern}' occurrence at [{start_idx} - {end_idx}] — window [{win_start}:{win_end}]")
+                st.write(f"Animating pattern '{chosen_pattern}' occurrence at [{start_idx} - {end_idx}] — showing window [{win_start}:{win_end}]")
                 steps = []
                 state = 0
                 for i, ch in enumerate(subseq):
@@ -553,14 +553,26 @@ def main():
 
                 st.session_state.anim_steps = steps
 
-                # ✅ ONLY MANUAL CONTROLS NOW
-                c1, c2, c3 = st.columns([1,1,1])
+                c1, c2, c3, c4 = st.columns([1,1,1,1])
                 if c1.button("⏮ Reset"):
                     st.session_state.anim_index = 0
+                    st.session_state.anim_playing = False
                 if c2.button("◀ Back"):
                     st.session_state.anim_index = max(0, st.session_state.anim_index - 1)
+                    st.session_state.anim_playing = False
                 if c3.button("Next ▶"):
                     st.session_state.anim_index = min(len(steps)-1, st.session_state.anim_index + 1)
+                    st.session_state.anim_playing = False
+                if c4.button("⏯ Play/Pause"):
+                    st.session_state.anim_playing = not st.session_state.anim_playing
+
+                if st.session_state.anim_playing:
+                    if st.session_state.anim_index < len(steps)-1:
+                        st.session_state.anim_index += 1
+                        time.sleep(step_delay)
+                        st.rerun()
+                    else:
+                        st.session_state.anim_playing = False
 
                 cur_idx = st.session_state.anim_index
                 disp_parts = []
