@@ -20,7 +20,6 @@ st.set_page_config(page_title="DNA Pattern Matcher", page_icon="🧬", layout="w
 
 st.markdown("""
 <style>
-<h>DNA PATTERN MATCHING <h>
 .header { display:flex; align-items:center; gap:12px; margin-bottom: 8px; }
 .logo-svg { width:56px; height:56px; filter: drop-shadow(0 2px 6px rgba(0,0,0,0.3)); }
 .watermark { position: fixed; right: 10px; bottom: 10px; opacity: 0.06; font-size: 56px; transform: rotate(-20deg); z-index: 0; pointer-events:none; }
