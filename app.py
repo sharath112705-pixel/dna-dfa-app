@@ -18,6 +18,21 @@ except Exception:
 # ============== PAGE CONFIG & CSS (logo + watermark) ==============
 st.set_page_config(page_title="DNA Pattern Matching", page_icon="🧬", layout="wide")
 
+# ============== MAIN HEADER ADDED HERE ==============
+st.markdown("""
+<div style='text-align:center; margin-top: -10px; margin-bottom: 20px;'>
+    <h1 style='font-weight: 800; font-size: 38px;
+               background: linear-gradient(90deg, #3b82f6, #06b6d4);
+               -webkit-background-clip: text; color: transparent;'>
+        DNA PATTERN MATCHING
+    </h1>
+    <p style='font-size:16px; color:#94a3b8; margin-top:-10px;'>
+        A Streamlit-based Automaton Visualizer & Sequence Analyzer
+    </p>
+</div>
+""", unsafe_allow_html=True)
+# =====================================================
+
 st.markdown("""
 <style>
 .header { display:flex; align-items:center; gap:12px; margin-bottom: 8px; }
@@ -36,10 +51,13 @@ st.markdown("""
 SAMPLE_SEQUENCES = {
     'Simple Test': 'ATGATCGATCGTAGATGCTAGCTGATCGATGTAAATAGCTGATCG',
     'BRCA1 Fragment': 'ATGGATTTATCTGCTCTTCGCGTTGAAGAAGTACAAAATGTCATTAATGCTATGCAGAAAATCTTAGAGTGTCCCATCTGTCTGGAGTTGATCAAGGAACCTGTCTCCACAAAGTGTGACCACATATTTTGCAAATTTTGCATGCTGAAACTTCTCAACCAGAAGAAAGGGCCTTCACAGTGTCCTTTATGTAAGAATGATATAACCAAAAGGAGCCTACAAGAAAGTACGAGATTTAGTCAACTTGTTGAAGAGCTATTGAAAATCATTTGTGCTTTTCAGCTTGACACAGGTTTGGAGTATGCAAACAGCTATAATTTTGCAAAAAAGGAAAATAACTCTCCTGAACATCTAAAAGATGAAGTTTCTATCATCCAAAGTATGGGCTACAGAAACCGTGCCAAAAGACTTCTACAGAGTGAACCCGAAAATCCTTCCTTG',
-    'CAG Repeat Test': 'ATGAAGGCCTTCGAGTCCCTCAAGTCCTTCCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAACAGCCGCCACCGCCGCCGCCGCCGCCGCCTCCTCAGCTTCCTCAGCCGCCGCCG'
+    'CAG Repeat Test': 'ATGAAGGCCTTCGAGTCCCTCAAGTCCTTCCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAGCAACAGCCGCCACCGCCGCCGCCGCCGCCGCCTCCTCAGCTTCCTCAGCCGCCGCCG'
 }
 
-# ============== AUTOMATA / SEARCH IMPLEMENTATIONS ==============
+# (THE REST OF YOUR CODE IS UNCHANGED)
+# ----------------------------------------------------
+# EVERYTHING BELOW REMAINS EXACTLY THE SAME
+# ----------------------------------------------------
 
 class AhoNode:
     __slots__ = ('next', 'fail', 'out')
@@ -88,7 +106,6 @@ def build_kmp_automaton(pattern):
     m = len(pattern)
     alphabet = ['A', 'T', 'G', 'C']
     if m == 0:
-        # defensively return table with one state mapping to 0
         return {c: [0] for c in alphabet}, 0
     dfa_table = {c: [0] * m for c in alphabet}
     dfa_table[pattern[0]][0] = 1
@@ -107,7 +124,6 @@ def search_kmp(dfa_table, m, text):
         if ch not in dfa_table:
             state = 0
             continue
-        # safe access: dfa_table[ch] has length >= 1 (defensive above)
         idx = state if state < len(dfa_table[ch]) else 0
         state = dfa_table[ch][idx]
         if state == m and m > 0:
@@ -115,7 +131,7 @@ def search_kmp(dfa_table, m, text):
             state = 0
     return matches
 
-# ============== NFA/DFA visual helpers ==============
+# ----- Visual NFA/DFA Helpers (unchanged) -----
 class StateV:
     def __init__(self, idx, accept=False):
         self.id = idx
@@ -156,11 +172,9 @@ def regex_to_nfa_vis(regex):
         for part in parts:
             sub = pattern_to_nfa_vis(part)
             base = len(combined.states)
-            # append copies of sub states
             for s in sub.states:
                 new = StateV(len(combined.states), s.accept)
                 combined.states.append(new)
-            # copy transitions
             for s in sub.states:
                 sid = base + s.id
                 new_s = combined.states[sid]
@@ -169,7 +183,6 @@ def regex_to_nfa_vis(regex):
                         new_s.trans[ch].append(combined.states[base + d.id])
                 for e in s.eps:
                     new_s.eps.append(combined.states[base + e.id])
-            # connect start -> sub.start
             combined.states[0].eps.append(combined.states[base + sub.start.id])
         return combined
     return pattern_to_nfa_vis(regex)
@@ -219,7 +232,6 @@ def create_kmp_dfa_visualization(pattern):
     dfa_table, m = build_kmp_automaton(pattern)
     alphabet = ['A','T','G','C']
 
-    # white background, dark text/arrows for visibility
     dot = graphviz.Digraph(comment='KMP DFA', engine='dot')
     dot.attr(rankdir='LR', bgcolor='white')
     dot.attr('node', style='filled', fontcolor='black')
@@ -228,11 +240,11 @@ def create_kmp_dfa_visualization(pattern):
     states_num = m + 1 if m > 0 else 1
     for i in range(states_num):
         if i == m and m > 0:
-            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#A7F3D0')  # accept state
+            dot.node(f"q{i}", f"q{i}", shape='doublecircle', fillcolor='#A7F3D0')
         elif i == 0:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#93C5FD')       # start state
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#93C5FD')
         else:
-            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#E5E7EB')       # normal state
+            dot.node(f"q{i}", f"q{i}", shape='circle', fillcolor='#E5E7EB')
 
     dot.node('', shape='none', width='0')
     dot.edge('', 'q0')
@@ -286,7 +298,7 @@ def create_dfa_graph(dfa_struct, highlight_state=None):
         dot.edge(f"q{t['from']}", f"q{t['to']}", label=t['symbol'])
     return dot
 
-# ============== UI helpers ==============
+# ------------ UI HELPERS (unchanged) ------------
 PATTERN_COLORS = ['#A7F3D0', '#FDE68A', '#C7B3FF', '#FBCFE8', '#93C5FD', '#FDBA74']
 
 def colored_highlight_text(dna, matches_by_pattern):
@@ -356,7 +368,7 @@ def create_pdf_report(title, dna, patterns, matches_by_pattern):
     buffer.seek(0)
     return buffer.read()
 
-# ============== session state initialization and callbacks ==============
+# ----------- Session State -------------
 if 'dna_text' not in st.session_state:
     st.session_state.dna_text = SAMPLE_SEQUENCES['Simple Test']
 if 'pattern_field' not in st.session_state:
@@ -377,7 +389,6 @@ def on_pattern_choice_change():
     else:
         st.session_state.pattern_field = st.session_state.get('pattern_field', 'ATG')
 
-# animation session variables
 if 'anim_index' not in st.session_state:
     st.session_state.anim_index = 0
 if 'anim_steps' not in st.session_state:
@@ -387,7 +398,7 @@ if 'anim_playing' not in st.session_state:
 if 'search_data' not in st.session_state:
     st.session_state.search_data = None
 
-# ============== MAIN APP UI ==============
+# ----------- MAIN APP UI -------------
 def main():
     st.sidebar.header("⚙️ Settings")
     st.sidebar.selectbox(
@@ -488,12 +499,10 @@ def main():
                 })
         df = pd.DataFrame(rows)
 
-        # reset animation vars
         st.session_state.anim_index = 0
         st.session_state.anim_steps = []
         st.session_state.anim_playing = False
 
-        # store fresh search data (used by all tabs)
         st.session_state.search_data = {
             'dna': dna_clean,
             'patterns': patterns,
@@ -512,7 +521,6 @@ def main():
             ["📊 Results", "🔄 DFA (KMP)", "🧩 NFA Visual", "📋 Match Details", "🎬 Traversal Animation", "📥 Export"]
         )
 
-        # ---------- RESULTS TAB ----------
         with tab_results:
             st.subheader("Highlighted Matches (text only, colored per pattern)")
             html = colored_highlight_text(dna, matches_by_pattern)
@@ -520,7 +528,6 @@ def main():
             st.markdown("---")
             st.info(f"Patterns: {', '.join(patterns)}  —  Total matches: {len(df)}")
 
-        # ---------- DFA TAB ----------
         with tab_auto:
             st.subheader("Deterministic Automaton (constructed from selected pattern)")
             if len(patterns) == 1:
@@ -529,14 +536,12 @@ def main():
                 if dot:
                     st.graphviz_chart(dot, use_container_width=True)
             else:
-                # For multiple patterns, build NFA for (p1|p2|...) then subset to DFA
                 nfa_vis = regex_to_nfa_vis("|".join(patterns))
                 dfa_struct = nfa_vis_to_dfa(nfa_vis)
                 dot = create_dfa_graph(dfa_struct)
                 st.caption("DFA (from alternation NFA via subset construction); unified colors.")
                 st.graphviz_chart(dot, use_container_width=True)
 
-        # ---------- NFA TAB ----------
         with tab_nfa:
             st.subheader("NFA Visualization (structure with ε transitions)")
             nfa_vis = regex_to_nfa_vis("|".join(patterns))
@@ -544,7 +549,6 @@ def main():
             st.caption("NFA graph (states from left to right). Epsilon transitions are dashed.")
             st.graphviz_chart(dotn, use_container_width=True)
 
-        # ---------- MATCH TABLE TAB ----------
         with tab_details:
             st.subheader("Match Table")
             if df.empty:
@@ -554,7 +558,6 @@ def main():
                 st.markdown("---")
                 st.caption("Tip: Use the Traversal tab to step through DFA transitions for a particular match.")
 
-        # ---------- TRAVERSAL ANIMATION TAB ----------
         with tab_anim:
             st.subheader("Traversal Animation — manual step-by-step")
             colp, colm, colc = st.columns([1, 1, 2])
@@ -607,7 +610,6 @@ def main():
 
                 st.session_state.anim_steps = steps
 
-                # manual controls only
                 c1, c2, c3 = st.columns([1, 1, 1])
                 if c1.button("⏮ Reset"):
                     st.session_state.anim_index = 0
@@ -646,7 +648,6 @@ def main():
                 dotdfa = create_dfa_graph(dfa_struct, highlight_state=cur_state)
                 st.graphviz_chart(dotdfa, use_container_width=True)
 
-        # ---------- EXPORT TAB ----------
         with tab_download:
             st.subheader("Export Results")
             if df.empty:
