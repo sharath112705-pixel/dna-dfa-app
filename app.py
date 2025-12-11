@@ -17,7 +17,6 @@ except Exception:
 
 # ============== PAGE CONFIG & CSS (logo + watermark) ==============
 st.set_page_config(page_title="DNA Pattern Matching", page_icon="🧬", layout="wide")
-st.set_page_config(page_title="DNA MATCHING",page_icon="",layot="wide")
 
 st.markdown("""
 <style>
